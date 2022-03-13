@@ -1,0 +1,5 @@
+coffee
+True
+True
+standard
+True
