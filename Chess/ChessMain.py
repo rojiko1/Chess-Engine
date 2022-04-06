@@ -3,18 +3,20 @@ import pygame as p
 from Chess import ChessEngine
 from Chess import OtherStates
 
-#Project status: draw by repetition, 50 move rule yet to do, lichess api, chess notation
+#Project status: lichess api, chess notation
+#Current issue: KeyError: '-R' when adjusting board to test checkInsufficientMaterial
 
-WINDOW_WIDTH = 1280 #1280, 960, 640
-WINDOW_HEIGHT = 800 #800, 600, 400
-WIDTH = HEIGHT = 800 #800, 600, 400
+SIZE_MULTIPLIER = 1.6 #suggested (in order of largest to samllest window size): 1.6, 2, 8/3, 4
+WINDOW_WIDTH = 2560 / SIZE_MULTIPLIER
+WINDOW_HEIGHT = 1600 / SIZE_MULTIPLIER
+WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
 DIMENSION = 8
 SQ_SIZE = HEIGHT / DIMENSION
 FPS = 30
 IMAGES = []
 PIECES = ["bR", "bN", "bB", "bQ", "bK", "bp", "wp", "wR", "wN", "wB", "wQ", "wK"]
 BOARD_COLORS = {"coffee": [p.Color("burlywood"), p.Color("salmon4")], "greyscale": [p.Color("gray90"), p.Color("gray60")]}
-turnLabel = "White's"
+#turnLabel = "White's"
 
 def loadImages(pieceStyle):
     #load standard pieces part 1
@@ -68,7 +70,7 @@ def loadImages(pieceStyle):
 
 def main():
     p.init()
-    screen = p.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    screen = p.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), p.RESIZABLE)
     screen.fill(p.Color("white"))
     p.display.set_caption("Chess Engine")
     clock = p.time.Clock()
@@ -80,16 +82,20 @@ def main():
     menu_complete = run_menu(screen, clock, ms, ss, running) #runs menu and waits for something to be returned
     if menu_complete:
         #game screen
+        gameComplete = False
         sqSelected = ()
         playerClicks = []
         moveMade = False
+        tempFiftyMove = False
+        tempRepetition = False
+        tempInsufficientMaterial = False
         p.display.flip()
         legalMoves = gs.getLegalMoves()
         while running:
             for e in p.event.get():
                 if e.type == p.QUIT:
                     running = False
-                elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < WIDTH) & (p.mouse.get_pos()[1] < HEIGHT):
+                elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < WIDTH) & (p.mouse.get_pos()[1] < HEIGHT) & (not gameComplete):
                     location = p.mouse.get_pos()
                     column = location[0] / SQ_SIZE
                     row = location[1] / SQ_SIZE
@@ -118,12 +124,15 @@ def main():
                                         if (choice == "b") | (choice == "B"):
                                             legalMove.promotionChoice = "B"
                                     gs.makeMove(legalMove)
+                                    tempFiftyMove = gs.fiftyMoveRuleDraw
+                                    tempRepetition = gs.drawByRepetition
+                                    tempInsufficientMaterial = gs.insufficientMaterial
                                     moveMade = True
                                     sqSelected = ()
                                     playerClicks = []
                             if not moveMade:
                                 playerClicks = [sqSelected]
-                elif e.type == p.KEYDOWN:
+                elif (e.type == p.KEYDOWN) & (not gameComplete):
                     if e.key == p.K_BACKSPACE:
                         if ss.undoMoveEnabled:
                             gs.undoMove()
@@ -131,7 +140,23 @@ def main():
             if moveMade:
                 legalMoves = gs.getLegalMoves()
                 moveMade = False
-            drawGameState(screen, gs, ss, sqSelected, legalMoves)
+            if not gameComplete:
+                drawGameState(screen, gs, ss, sqSelected, legalMoves)
+                if gs.checkmate:
+                    gameComplete = True
+                    drawEndOfGame(screen, "checkmate", color = gs.getOppColor(gs.getTurnColor()))
+                elif gs.stalemate:
+                    gameComplete = True
+                    drawEndOfGame(screen, "stalemate")
+                elif tempInsufficientMaterial:
+                    gameComplete = True
+                    drawEndOfGame(screen, "insufficientMaterial")
+                elif tempRepetition:
+                    gameComplete = True
+                    drawEndOfGame(screen, "repetition")
+                elif tempFiftyMove:
+                    gameComplete = True
+                    drawEndOfGame(screen, "fiftyMove")
             clock.tick(FPS)
             p.display.flip()
 
@@ -184,7 +209,7 @@ def drawMenuState(screen, ms):
     buttonHeight = ms.buttonHeight
     startLoc = ms.startButtonLocation
     settingsLoc = ms.settingsButtonLocation
-    TEXT_FONT = p.font.SysFont('calibri', int(WINDOW_WIDTH * (32 / 1280)), False, False)
+    TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (28 / 1280)), False, False)
     TEXT_COLOR = p.Color("white")
     buttonColor = p.Color("black")
 
@@ -204,8 +229,6 @@ def drawSettingsState(screen, ss):
     screen.fill(p.Color("white"))
     buttonWidth = ss.buttonWidth
     buttonHeight = ss.buttonHeight
-    buttonStartX = ss.buttonStartX
-    textStartX = ss.textStartX
     backLoc = ss.backButtonLocation
     #flipBoardLoc = ss.flipBoardLocation
     boardColorSchemeLoc = ss.boardColorSchemeLocation
@@ -214,11 +237,11 @@ def drawSettingsState(screen, ss):
     pieceStyleLoc = ss.pieceStyleLocation
     undoMoveLoc = ss.undoMoveLocation
 
-    TITLE_TEXT_FONT = p.font.SysFont('calibri', int(WINDOW_WIDTH * (88 / 1280)), True, False)
+    TITLE_TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (80 / 1280)), True, False)
     TITLE_TEXT_COLOR = p.Color("black")
-    LABEL_FONT = p.font.SysFont('calibri', int(WINDOW_WIDTH * (44 / 1280)), False, False)
+    LABEL_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (40 / 1280)), False, False)
     LABEL_COLOR = p.Color("black")
-    TEXT_FONT = p.font.SysFont('calibri', int(WINDOW_WIDTH * (32 / 1280)), False, False)
+    TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (28 / 1280)), False, False)
     TEXT_COLOR = p.Color("white")
 
     titleText = TITLE_TEXT_FONT.render("SETTINGS", 0, TITLE_TEXT_COLOR)
@@ -279,6 +302,37 @@ def drawSettingsState(screen, ss):
     screen.blit(undoMoveOnText, (undoMoveLoc[0] + ((buttonWidth - undoMoveOnText.get_width()) / 2), undoMoveLoc[1] + ((buttonHeight - undoMoveOnText.get_height()) / 2)))
     screen.blit(undoMoveOffText, (undoMoveLoc[0] + buttonWidth + ((buttonWidth - undoMoveOffText.get_width()) / 2), undoMoveLoc[1] + ((buttonHeight - undoMoveOffText.get_height()) / 2)))
 
+def drawEndOfGame(screen, state, color = "None"):
+    TEXT_COLOR = p.Color("white")
+    TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (30 / 1280)), True, False)
+
+    rectSize = (WIDTH / 2, HEIGHT / 10)
+    rectPos = ((WIDTH - rectSize[0]) / 2, (HEIGHT - rectSize[1]) / 2)
+
+    if state == "checkmate":
+        if color == "w":
+            winColor = "White"
+        else:
+            winColor = "Black"
+        text = TEXT_FONT.render(winColor + " wins by checkmate.", 0, TEXT_COLOR)
+    elif state == "stalemate":
+        text = TEXT_FONT.render("Draw by stalemate.", 0, TEXT_COLOR)
+    elif state == "insufficientMaterial":
+        text = TEXT_FONT.render("Draw by insufficient material.", 0, TEXT_COLOR)
+    elif state == "repetition":
+        text = TEXT_FONT.render("Draw by repetition.", 0, TEXT_COLOR)
+    elif state == "fiftyMove":
+        text = TEXT_FONT.render("Draw by fifty move rule.", 0, TEXT_COLOR)
+
+    rectSize = (text.get_width() * 1.5, text.get_height() * 2.5)
+    rectPos = ((WIDTH - rectSize[0]) / 2, (HEIGHT - rectSize[1]) / 2)
+    rect = p.Surface(rectSize)
+    rect.set_alpha(200)
+    rect.fill((0, 0, 0))
+    screen.blit(rect, rectPos)
+
+    screen.blit(text, (rectPos[0] + ((rectSize[0] - text.get_width()) / 2), rectPos[1] + ((rectSize[1] - text.get_height()) / 2)))
+
 def drawGameState(screen, gs, ss, sqSelected, legalMoves):
     screen.fill(p.Color("white"))
     drawBoard(screen, gs, ss, sqSelected, legalMoves)
@@ -321,7 +375,7 @@ def drawSelected(screen, gs, sqSelected, legalMoves):
                         screen.blit(IMAGES[-1], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 def renderMoveHistory(screen, gs):
-    TEXT_FONT = p.font.SysFont('calibri', int(WINDOW_WIDTH * (28 / 1280)), False, False)
+    TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (28 / 1280)), False, False)
     TEXTBOX_X = WIDTH
     TEXTBOX_Y = 0
     TEXTBOX_WIDTH = int(WINDOW_WIDTH - WIDTH)
@@ -329,14 +383,12 @@ def renderMoveHistory(screen, gs):
     TEXT_COLOR = p.Color("black")
     TEXTBOX_COLOR = p.Color("light gray")
     moveLogText = []
+    space = TEXT_FONT.size(" ")[0]
     p.draw.rect(screen, TEXTBOX_COLOR, p.Rect(TEXTBOX_X, TEXTBOX_Y, TEXTBOX_WIDTH, TEXTBOX_HEIGHT))
     for item in gs.moveLog:
-        moveLogText.append(item.notation + ",")
-    '''for item in gs.chessNotationLog:
-        moveLogText.append(item + ",")'''
+        moveLogText.append(item.notation + " ")
     if len(moveLogText) > 0:
         moveLogText[-1] = (moveLogText[-1])[:-1]
-    space = TEXT_FONT.size(" ")[0]
     MAX_WIDTH = 0.9 * TEXTBOX_WIDTH
     LOG_X = TEXTBOX_X + ((TEXTBOX_WIDTH - MAX_WIDTH) / 2)
     MAX_HEIGHT = 0.94 * TEXTBOX_HEIGHT

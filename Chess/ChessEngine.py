@@ -1,3 +1,5 @@
+import copy
+
 class GameState():
 
     def __init__(self):
@@ -20,9 +22,14 @@ class GameState():
         self.bKingLocation = (0, 4)
         self.checkmate = False
         self.stalemate = False
+        self.fiftyMoveRuleDraw = False
         self.drawByRepetition = False
+        self.insufficientMaterial = False
         self.hasCastlingRight = {'wks': True, 'wqs': True, 'bks': True, 'bqs': True}
         self.castlingRightLost = {'wks': -1, 'wqs': -1, 'bks': -1, 'bqs': -1}
+        self.noCaptureCount = 0
+        self.whiteBoards = [[copy.deepcopy(self.board), 1]]
+        self.blackBoards = []
 
     def getTurnColor(self):
         if self.whiteToMove:
@@ -61,7 +68,23 @@ class GameState():
             elif move.endC == 6:
                 self.board[move.endR][7] = "--"
                 self.board[move.endR][move.endC - 1] = color + "R"
+        if move.pieceCaptured == "--":
+            self.noCaptureCount = self.noCaptureCount + 1
+        else:
+            self.noCaptureCount = 0
         self.moveLog.append(move)
+        if self.noCaptureCount >= 50:
+            pawnMoveCount = 0
+            for index in range(1, 51):
+                if self.moveLog[-1 * index].pieceMoved[1] == "p":
+                    pawnMoveCount = pawnMoveCount + 1
+            if pawnMoveCount == 0:
+                self.fiftyMoveRuleDraw = True
+        self.recordBoard()
+        if self.checkDrawByRepetition():
+            self.drawByRepetition = True
+        if self.checkInsufficentMaterial():
+            self.insufficientMaterial = True
         move.generateChessNotation(self)
         self.updateCastling()
         self.whiteToMove = not self.whiteToMove
@@ -101,6 +124,7 @@ class GameState():
         if len(self.moveLog) > 0:
             move = self.moveLog[-1]
             color = move.pieceMoved[0]
+            self.deleteBoard()
             self.board[move.startR][move.startC] = move.pieceMoved
             self.board[move.endR][move.endC] = move.pieceCaptured
             if move.enPassant:
@@ -125,8 +149,15 @@ class GameState():
             elif move.pieceMoved == "bK":
                 self.bKingLocation = (move.startR, move.startC)
             self.moveLog.pop(-1)
+            if move.pieceCaptured == "--":
+                self.noCaptureCount = self.noCaptureCount - 1
+            else:
+                self.noCaptureCount = self.findNoCaptureCount()
             self.checkmate = False
             self.stalemate = False
+            self.fiftyMoveRuleDraw = False
+            self.drawByRepetition = False
+            self.insufficientMaterial = False
 
     def getLegalMoves(self): #considers checks from movement
         turn = self.getTurnColor()
@@ -177,6 +208,87 @@ class GameState():
             return self.squareUnderAttack(self.wKingLocation[0], self.wKingLocation[1], turn)
         elif turn == "b":
             return self.squareUnderAttack(self.bKingLocation[0], self.bKingLocation[1], turn)
+
+    def findNoCaptureCount(self):
+        index = 1
+        noCaptureCount = 0
+        while (index < len(self.moveLog)) & (self.moveLog[-1 * index].pieceCaptured == "--"):
+            noCaptureCount = noCaptureCount + 1
+            index = index + 1
+        return noCaptureCount
+
+    def boardEquals(self, board):
+        for r in range(len(board)):
+            for c in range(len(board[0])):
+                if self.board[r][c] != board[r][c]:
+                    return False
+        return True
+
+    def recordBoard(self):
+        if self.getOppColor(self.getTurnColor()) == "w":
+            for board in self.whiteBoards:
+                if self.boardEquals(board[0]):
+                    board[1] = board[1] + 1
+                    return None
+            self.whiteBoards.append([copy.deepcopy(self.board), 1])
+            return None
+        elif self.getOppColor(self.getTurnColor()) == "b":
+            for board in self.blackBoards:
+                if self.boardEquals(board[0]):
+                    board[1] = board[1] + 1
+                    return None
+            self.blackBoards.append([copy.deepcopy(self.board), 1])
+            return None
+
+    def deleteBoard(self):
+        if self.getTurnColor() == "w":
+            for board in self.whiteBoards:
+                if self.boardEquals(board[0]):
+                    if board[1] == 1:
+                        self.whiteBoards.remove(board)
+                    else:
+                        board[1] = board[1] - 1
+        elif self.getTurnColor() == "b":
+            for board in self.blackBoards:
+                if self.boardEquals(board[0]):
+                    if board[1] == 1:
+                        self.blackBoards.remove(board)
+                    else:
+                        board[1] = board[1] - 1
+
+    def checkDrawByRepetition(self):
+        if self.getOppColor(self.getTurnColor()) == "w":
+            for board in self.whiteBoards:
+                if board[1] == 3:
+                    return True
+            return False
+        elif self.getOppColor(self.getTurnColor()) == "b":
+            for board in self.blackBoards:
+                if board[1] == 3:
+                    return True
+            return False
+
+    def checkInsufficentMaterial(self):
+        boardPieceCount = {"--": 0, "bp": 0, "bR": 0, "bN": 0, "bB": 0, "bQ": 0, "bK": 0, "wp": 0, "wR": 0, "wN": 0, "wB": 0, "wQ": 0, "wK": 0}
+        bishopLocations = []
+        for r in range(0, len(self.board)):
+            for c in range(0, len(self.board[0])):
+                boardPieceCount[self.board[r][c]] = boardPieceCount[self.board[r][c]] + 1
+                if self.board[r][c][1] == "B":
+                    bishopLocations.append((r, c))
+        if (boardPieceCount["wp"] == 0) & (boardPieceCount["wR"] == 0) & (boardPieceCount["wQ"] == 0) & (boardPieceCount["bp"] == 0) & (boardPieceCount["bR"] == 0) & (boardPieceCount["bQ"] == 0):
+            if (boardPieceCount["wN"] == 0) & (boardPieceCount["wB"] == 0) & (boardPieceCount["bN"] == 0) & (boardPieceCount["bB"] == 0):
+                return True
+            elif ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 0)) & (((boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 0)) | ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 1))):
+                return True
+            elif ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 0)) & (((boardPieceCount["wN"] == 1) & (boardPieceCount["bN"] == 0)) | ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 1))):
+                return True
+            elif (boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 1) & (len(bishopLocations) == 2):
+                firstBishopMoveModulo = (bishopLocations[0][0] + bishopLocations[0][1]) % 2
+                secondBishopMoveModulo = (bishopLocations[1][0] + bishopLocations[1][1]) % 2
+                if firstBishopMoveModulo == secondBishopMoveModulo:
+                    return True
+        return False
 
     def squareUnderAttack(self, r, c, turn):
         oppMoves = self.getPossibleMoves(self.getOppColor(turn))

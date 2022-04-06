@@ -24,8 +24,6 @@ class SettingsState():
         self.backButton = False
         self.buttonWidth = WINDOW_WIDTH * (170 / 1280)
         self.buttonHeight = WINDOW_HEIGHT * (60 / 800)
-        self.buttonStartX = 400
-        self.textStartX = 50
         self.backButtonLocation = (WINDOW_WIDTH - self.buttonWidth, WINDOW_HEIGHT - self.buttonHeight)
         #self.flipBoardLocation = 1
         self.boardColorSchemeLocation = (0.2 * WINDOW_WIDTH, 0.32 * WINDOW_HEIGHT)
