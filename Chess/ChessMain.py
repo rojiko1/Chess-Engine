@@ -3,12 +3,12 @@ import pygame as p
 from Chess import ChessEngine
 from Chess import OtherStates
 
-#Project status: lichess api, chess notation
-#Current issue: KeyError: '-R' when adjusting board to test checkInsufficientMaterial
+#Project status: drag pieces to make move, comment code, multiplayer w/ server, lichess api, chess notation
+#Current issue:
 
-SIZE_MULTIPLIER = 1.6 #suggested (in order of largest to samllest window size): 1.6, 2, 8/3, 4
+SIZE_MULTIPLIER = 2 #suggested (in order of largest to smallest window size): 2, 8/3, 4
 WINDOW_WIDTH = 2560 / SIZE_MULTIPLIER
-WINDOW_HEIGHT = 1600 / SIZE_MULTIPLIER
+WINDOW_HEIGHT = 1800 / SIZE_MULTIPLIER
 WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
 DIMENSION = 8
 SQ_SIZE = HEIGHT / DIMENSION
@@ -63,14 +63,14 @@ def loadImages(pieceStyle):
                 IMAGES.append(p.transform.scale(standardwp, (SQ_SIZE, SQ_SIZE)))
         IMAGES.append(p.transform.scale(p.image.load("images/leipzigPieces/leipzig" + piece +".png"), (SQ_SIZE, SQ_SIZE))) #load leipzig pieces
 
-    IMAGES.append(p.transform.scale(p.image.load("images/cover.png"), (1563 / (2560 / WINDOW_WIDTH), 1042 / (1600 / WINDOW_HEIGHT))))
+    IMAGES.append(p.transform.scale(p.image.load("images/cover.png"), (1563 / (2560 / WINDOW_WIDTH), 1042 / (1800 / WINDOW_HEIGHT))))
     IMAGES.append(p.transform.scale(p.image.load("images/reddot.png"), (SQ_SIZE, SQ_SIZE)))
     IMAGES.append(p.transform.scale(p.image.load("images/dot.png"), (SQ_SIZE, SQ_SIZE)))
     IMAGES.append(p.transform.scale(p.image.load("images/target.png"), (SQ_SIZE, SQ_SIZE)))
 
 def main():
     p.init()
-    screen = p.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), p.RESIZABLE)
+    screen = p.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     screen.fill(p.Color("white"))
     p.display.set_caption("Chess Engine")
     clock = p.time.Clock()
@@ -82,6 +82,9 @@ def main():
     menu_complete = run_menu(screen, clock, ms, ss, running) #runs menu and waits for something to be returned
     if menu_complete:
         #game screen
+        gameClock = ChessEngine.Clock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
+        whiteClockOn = True
+        num_ticks = 0
         gameComplete = False
         sqSelected = ()
         playerClicks = []
@@ -89,6 +92,8 @@ def main():
         tempFiftyMove = False
         tempRepetition = False
         tempInsufficientMaterial = False
+        whiteTimeout = False
+        blackTimeout = False
         p.display.flip()
         legalMoves = gs.getLegalMoves()
         while running:
@@ -138,10 +143,23 @@ def main():
                             gs.undoMove()
                             moveMade = True
             if moveMade:
+                gameClock.increment(gs.getOppColor(gs.getTurnColor()))
+                whiteClockOn = not whiteClockOn
+                num_ticks = 0
                 legalMoves = gs.getLegalMoves()
                 moveMade = False
             if not gameComplete:
-                drawGameState(screen, gs, ss, sqSelected, legalMoves)
+                if len(gs.moveLog) > 0:
+                    num_ticks = num_ticks + 1
+                    if(num_ticks >= FPS):
+                        gameClock.updateClock(gs.getTurnColor())
+                        print(str(gameClock.whiteBaseTime) + "  |  " + str(gameClock.blackBaseTime))
+                        num_ticks = 0
+                        if gameClock.whiteBaseTime == 0:
+                            whiteTimeout = True
+                        elif gameClock.blackBaseTime == 0:
+                            blackTimeout = True
+                drawGameState(screen, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn)
                 if gs.checkmate:
                     gameComplete = True
                     drawEndOfGame(screen, "checkmate", color = gs.getOppColor(gs.getTurnColor()))
@@ -157,6 +175,12 @@ def main():
                 elif tempFiftyMove:
                     gameComplete = True
                     drawEndOfGame(screen, "fiftyMove")
+                elif whiteTimeout:
+                    gameComplete = True
+                    drawEndOfGame(screen, "whiteTimeout")
+                elif blackTimeout:
+                    gameComplete = True
+                    drawEndOfGame(screen, "blackTimeout")
             clock.tick(FPS)
             p.display.flip()
 
@@ -323,6 +347,10 @@ def drawEndOfGame(screen, state, color = "None"):
         text = TEXT_FONT.render("Draw by repetition.", 0, TEXT_COLOR)
     elif state == "fiftyMove":
         text = TEXT_FONT.render("Draw by fifty move rule.", 0, TEXT_COLOR)
+    elif state == "whiteTimeout":
+        text = TEXT_FONT.render("White timeout. Black wins.", 0, TEXT_COLOR)
+    elif state == "blackTimeout":
+        text = TEXT_FONT.render("Black timeout. White wins.", 0, TEXT_COLOR)
 
     rectSize = (text.get_width() * 1.5, text.get_height() * 2.5)
     rectPos = ((WIDTH - rectSize[0]) / 2, (HEIGHT - rectSize[1]) / 2)
@@ -333,11 +361,12 @@ def drawEndOfGame(screen, state, color = "None"):
 
     screen.blit(text, (rectPos[0] + ((rectSize[0] - text.get_width()) / 2), rectPos[1] + ((rectSize[1] - text.get_height()) / 2)))
 
-def drawGameState(screen, gs, ss, sqSelected, legalMoves):
+def drawGameState(screen, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn):
     screen.fill(p.Color("white"))
     drawBoard(screen, gs, ss, sqSelected, legalMoves)
     drawPieces(screen, gs.board, ss.pieceStyle)
     renderMoveHistory(screen, gs)
+    displayClock(screen, gameClock, whiteClockOn)
     #showTurn(screen, gs)
 
 def drawBoard(screen, gs, ss, sqSelected, legalMoves):
@@ -403,6 +432,45 @@ def renderMoveHistory(screen, gs):
             y += 1.2 * item_height
         screen.blit(log_screen, (x, y))
         x += item_width + space #can remove space - stylistic choice
+
+def displayClock(screen, gameClock, whiteClockOn):
+    TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (80 / 1280)), False, False)
+    LABEL_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (26 / 1280)), False, False)
+    WHITE_CLOCK_X = 0
+    BLACK_CLOCK_X = WINDOW_WIDTH / 2
+    CLOCK_Y = HEIGHT
+    CLOCK_WIDTH = WINDOW_WIDTH / 2
+    CLOCK_HEIGHT = WINDOW_HEIGHT - HEIGHT
+    TEXT_COLOR = p.Color("black")
+    ON_COLOR = p.Color("olivedrab4")
+    OFF_COLOR = p.Color("gray60")
+
+    if whiteClockOn:
+        whiteColor = ON_COLOR
+        blackColor = OFF_COLOR
+    else:
+        whiteColor = OFF_COLOR
+        blackColor = ON_COLOR
+
+    #white clock
+    p.draw.rect(screen, whiteColor, p.Rect(WHITE_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
+    whiteTimeText = TEXT_FONT.render(str(int(gameClock.whiteBaseTime / 60)) + ":" + str(int(gameClock.whiteBaseTime % 60)).zfill(2), 0, TEXT_COLOR)
+    screen.blit(whiteTimeText, (WHITE_CLOCK_X + ((CLOCK_WIDTH - whiteTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - whiteTimeText.get_height()) / 2)))
+
+    #black clock
+    p.draw.rect(screen, blackColor, p.Rect(BLACK_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
+    blackTimeText = TEXT_FONT.render(str(int(gameClock.blackBaseTime / 60)) + ":" + str(int(gameClock.blackBaseTime % 60)).zfill(2), 0, TEXT_COLOR)
+    screen.blit(blackTimeText, (BLACK_CLOCK_X + ((CLOCK_WIDTH - blackTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - blackTimeText.get_height()) / 2)))
+
+    #draw white rotated label
+    whiteTimeLabel = LABEL_FONT.render("WHITE", 0, TEXT_COLOR)
+    whiteTimeLabel = p.transform.rotate(whiteTimeLabel, 90)
+    screen.blit(whiteTimeLabel, (WHITE_CLOCK_X + (0.1 * whiteTimeLabel.get_width()), CLOCK_Y + ((CLOCK_HEIGHT - whiteTimeLabel.get_height()) / 2)))
+
+    #draw black rotated label
+    blackTimeLabel = LABEL_FONT.render("BLACK", 0, TEXT_COLOR)
+    blackTimeLabel = p.transform.rotate(blackTimeLabel, 90)
+    screen.blit(blackTimeLabel, (BLACK_CLOCK_X + (0.1 * blackTimeLabel.get_width()), CLOCK_Y + ((CLOCK_HEIGHT - blackTimeLabel.get_height()) / 2)))
 
 def showTurn(screen, gs):
     TEXT_SIZE = WINDOW_WIDTH * (28 / 1280)

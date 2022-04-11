@@ -18,15 +18,37 @@ class GameState():
         ]
         self.whiteToMove = True
         self.moveLog = []
-        self.wKingLocation = (7, 4)
-        self.bKingLocation = (0, 4)
+        #initialize king locations
+        self.wKingLocation = None
+        self.bKingLocation = None
+        for r in range(0, len(self.board)):
+            for c in range(0, len(self.board[0])):
+                if self.board[r][c] == "wK":
+                    self.wKingLocation = (r, c)
+                elif self.board[r][c] == "bK":
+                    self.bKingLocation = (r, c)
         self.checkmate = False
         self.stalemate = False
         self.fiftyMoveRuleDraw = False
         self.drawByRepetition = False
-        self.insufficientMaterial = False
-        self.hasCastlingRight = {'wks': True, 'wqs': True, 'bks': True, 'bqs': True}
-        self.castlingRightLost = {'wks': -1, 'wqs': -1, 'bks': -1, 'bqs': -1}
+        self.insufficientMaterial = self.checkInsufficentMaterial()
+        #initialize right to castle
+        self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
+        self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
+        if self.wKingLocation == (7, 4):
+            if self.board[7][7] == "wR":
+                self.hasCastlingRight['wks'] = True
+                self.castlingRightLost['wks'] = -1
+            elif self.board[7][0] == "wR":
+                self.hasCastlingRight['wqs'] = True
+                self.castlingRightLost['wqs'] = -1
+        elif self.bKingLocation == (0, 4):
+            if self.board[0][7] == "bR":
+                self.hasCastlingRight['bks'] = True
+                self.castlingRightLost['bks'] = -1
+            elif self.board[0][0] == "bR":
+                self.hasCastlingRight['bqs'] = True
+                self.castlingRightLost['bqs'] = -1
         self.noCaptureCount = 0
         self.whiteBoards = [[copy.deepcopy(self.board), 1]]
         self.blackBoards = []
@@ -273,7 +295,7 @@ class GameState():
         bishopLocations = []
         for r in range(0, len(self.board)):
             for c in range(0, len(self.board[0])):
-                boardPieceCount[self.board[r][c]] = boardPieceCount[self.board[r][c]] + 1
+                boardPieceCount[str(self.board[r][c])] = boardPieceCount[str(self.board[r][c])] + 1
                 if self.board[r][c][1] == "B":
                     bishopLocations.append((r, c))
         if (boardPieceCount["wp"] == 0) & (boardPieceCount["wR"] == 0) & (boardPieceCount["wQ"] == 0) & (boardPieceCount["bp"] == 0) & (boardPieceCount["bR"] == 0) & (boardPieceCount["bQ"] == 0):
@@ -474,3 +496,23 @@ class Move():
 
     def getRankFile(self, r, c):
         return self.columnsToFiles[c] + self.rowsToRanks[r]
+
+class Clock():
+
+    def __init__(self, whiteBaseTime, whiteIncrement, blackBaseTime, blackIncrement):
+        self.whiteBaseTime = whiteBaseTime * 60
+        self.whiteIncrement = whiteIncrement
+        self.blackBaseTime = blackBaseTime * 60
+        self.blackIncrement = blackIncrement
+
+    def increment(self, color):
+        if color == "w":
+            self.whiteBaseTime = self.whiteBaseTime + self.whiteIncrement
+        elif color == "b":
+            self.blackBaseTime = self.blackBaseTime + self.blackIncrement
+
+    def updateClock(self, color):
+        if color == "w":
+            self.whiteBaseTime = self.whiteBaseTime - 1
+        elif color == "b":
+            self.blackBaseTime = self.blackBaseTime - 1

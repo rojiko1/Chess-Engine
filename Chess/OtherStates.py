@@ -36,8 +36,8 @@ class SettingsState():
         defaultSettingsLines = defaultSettings.readlines()
         defaultSettings.close()
         self.numSettings = 5
-        self.clockLength = 5
-        self.clockIncrement = 5
+        self.clockLength = 10
+        self.clockIncrement = 10
         self.flipBoard = False
         self.boardColorScheme = defaultSettingsLines[0][:-1]
         self.highlightValidMoves = eval(defaultSettingsLines[1])
