@@ -1,8 +1,61 @@
+#file includes the following classes: GameState, Move, and Clock
+
 import copy
 
 class GameState():
 
     def __init__(self):
+        #first letter - black or white
+        #second letter - piece type
+        #"--" = empty space
+        self.board = [
+            ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+            ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
+            ["--", "--", "--", "--", "--", "--", "--", "--"],
+            ["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
+            ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
+        ]
+        self.whiteToMove = True
+        self.moveLog = []
+        #initialize king locations
+        self.wKingLocation = None
+        self.bKingLocation = None
+        for r in range(0, len(self.board)):
+            for c in range(0, len(self.board[0])):
+                if self.board[r][c] == "wK":
+                    self.wKingLocation = (r, c)
+                elif self.board[r][c] == "bK":
+                    self.bKingLocation = (r, c)
+        self.checkmate = False
+        self.stalemate = False
+        self.fiftyMoveRuleDraw = False
+        self.drawByRepetition = False
+        self.insufficientMaterial = self.checkInsufficentMaterial()
+        #initialize right to castle
+        self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
+        self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
+        if self.wKingLocation == (7, 4):
+            if self.board[7][7] == "wR":
+                self.hasCastlingRight['wks'] = True
+                self.castlingRightLost['wks'] = -1
+            elif self.board[7][0] == "wR":
+                self.hasCastlingRight['wqs'] = True
+                self.castlingRightLost['wqs'] = -1
+        elif self.bKingLocation == (0, 4):
+            if self.board[0][7] == "bR":
+                self.hasCastlingRight['bks'] = True
+                self.castlingRightLost['bks'] = -1
+            elif self.board[0][0] == "bR":
+                self.hasCastlingRight['bqs'] = True
+                self.castlingRightLost['bqs'] = -1
+        self.noCaptureCount = 0
+        self.whiteBoards = [[copy.deepcopy(self.board), 1]]
+        self.blackBoards = []
+
+    def resetGameState(self):
         #first letter - black or white
         #second letter - piece type
         #"--" = empty space
@@ -90,6 +143,7 @@ class GameState():
             elif move.endC == 6:
                 self.board[move.endR][7] = "--"
                 self.board[move.endR][move.endC - 1] = color + "R"
+        #record capture count for 50 move rule
         if move.pieceCaptured == "--":
             self.noCaptureCount = self.noCaptureCount + 1
         else:
@@ -102,6 +156,7 @@ class GameState():
                     pawnMoveCount = pawnMoveCount + 1
             if pawnMoveCount == 0:
                 self.fiftyMoveRuleDraw = True
+        #record board for draw by repetition
         self.recordBoard()
         if self.checkDrawByRepetition():
             self.drawByRepetition = True
@@ -143,45 +198,44 @@ class GameState():
             self.castlingRightLost[color + "qs"] = len(self.moveLog)
 
     def undoMove(self):
-        if len(self.moveLog) > 0:
-            move = self.moveLog[-1]
-            color = move.pieceMoved[0]
-            self.deleteBoard()
-            self.board[move.startR][move.startC] = move.pieceMoved
-            self.board[move.endR][move.endC] = move.pieceCaptured
-            if move.enPassant:
-                if color == "w":
-                    self.board[move.endR + 1][move.endC] = "bp"
-                elif color == "b":
-                    self.board[move.endR - 1][move.endC] = "wp"
-            if move.castling:
-                if move.endC == 6:
-                    self.board[move.endR][move.endC - 1] = "--"
-                    self.board[move.startR][7] = color + "R"
-                elif move.endC == 2:
-                    self.board[move.endR][move.endC + 1] = "--"
-                    self.board[move.startR][0] = color + "R"
-            for key, value in self.castlingRightLost.items():
-                if value == len(self.moveLog):
-                    self.hasCastlingRight[key] = True
-                    self.castlingRightLost[key] = -1
-            self.whiteToMove = not self.whiteToMove
-            if move.pieceMoved == "wK":
-                self.wKingLocation = (move.startR, move.startC)
-            elif move.pieceMoved == "bK":
-                self.bKingLocation = (move.startR, move.startC)
-            self.moveLog.pop(-1)
-            if move.pieceCaptured == "--":
-                self.noCaptureCount = self.noCaptureCount - 1
-            else:
-                self.noCaptureCount = self.findNoCaptureCount()
-            self.checkmate = False
-            self.stalemate = False
-            self.fiftyMoveRuleDraw = False
-            self.drawByRepetition = False
-            self.insufficientMaterial = False
+        move = self.moveLog[-1]
+        color = move.pieceMoved[0]
+        self.deleteBoard()
+        self.board[move.startR][move.startC] = move.pieceMoved
+        self.board[move.endR][move.endC] = move.pieceCaptured
+        if move.enPassant:
+            if color == "w":
+                self.board[move.endR + 1][move.endC] = "bp"
+            elif color == "b":
+                self.board[move.endR - 1][move.endC] = "wp"
+        if move.castling:
+            if move.endC == 6:
+                self.board[move.endR][move.endC - 1] = "--"
+                self.board[move.startR][7] = color + "R"
+            elif move.endC == 2:
+                self.board[move.endR][move.endC + 1] = "--"
+                self.board[move.startR][0] = color + "R"
+        for key, value in self.castlingRightLost.items():
+            if value == len(self.moveLog):
+                self.hasCastlingRight[key] = True
+                self.castlingRightLost[key] = -1
+        self.whiteToMove = not self.whiteToMove
+        if move.pieceMoved == "wK":
+            self.wKingLocation = (move.startR, move.startC)
+        elif move.pieceMoved == "bK":
+            self.bKingLocation = (move.startR, move.startC)
+        self.moveLog.pop(-1)
+        if move.pieceCaptured == "--":
+            self.noCaptureCount = self.noCaptureCount - 1
+        else:
+            self.noCaptureCount = self.findNoCaptureCount()
+        self.checkmate = False
+        self.stalemate = False
+        self.fiftyMoveRuleDraw = False
+        self.drawByRepetition = False
+        self.insufficientMaterial = False
 
-    def getLegalMoves(self): #considers checks from movement
+    def getLegalMoves(self): #considers checks from movement by taking all possibleMoves and identifying and removing moves that result in check
         turn = self.getTurnColor()
         possibleMoves = self.getPossibleMoves(turn)
         if not self.inCheck(turn):
@@ -204,7 +258,7 @@ class GameState():
                 self.stalemate = True
         return possibleMoves
 
-    def getPossibleMoves(self, color): #does not consider checks from movement
+    def getPossibleMoves(self, color): #does not consider checks from movement, generates all moves by chess rules
         moves = []
         for r in range(len(self.board)):
             for c in range(len(self.board[r])):
@@ -299,13 +353,13 @@ class GameState():
                 if self.board[r][c][1] == "B":
                     bishopLocations.append((r, c))
         if (boardPieceCount["wp"] == 0) & (boardPieceCount["wR"] == 0) & (boardPieceCount["wQ"] == 0) & (boardPieceCount["bp"] == 0) & (boardPieceCount["bR"] == 0) & (boardPieceCount["bQ"] == 0):
-            if (boardPieceCount["wN"] == 0) & (boardPieceCount["wB"] == 0) & (boardPieceCount["bN"] == 0) & (boardPieceCount["bB"] == 0):
+            if (boardPieceCount["wN"] == 0) & (boardPieceCount["wB"] == 0) & (boardPieceCount["bN"] == 0) & (boardPieceCount["bB"] == 0): #only kings on board
                 return True
-            elif ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 0)) & (((boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 0)) | ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 1))):
+            elif ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 0)) & (((boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 0)) | ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 1))): #only kings and one bishop
                 return True
-            elif ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 0)) & (((boardPieceCount["wN"] == 1) & (boardPieceCount["bN"] == 0)) | ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 1))):
+            elif ((boardPieceCount["wB"] == 0) & (boardPieceCount["bB"] == 0)) & (((boardPieceCount["wN"] == 1) & (boardPieceCount["bN"] == 0)) | ((boardPieceCount["wN"] == 0) & (boardPieceCount["bN"] == 1))): #only kings and one knight
                 return True
-            elif (boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 1) & (len(bishopLocations) == 2):
+            elif (boardPieceCount["wB"] == 1) & (boardPieceCount["bB"] == 1) & (len(bishopLocations) == 2): #only kings and two same square-color bishops
                 firstBishopMoveModulo = (bishopLocations[0][0] + bishopLocations[0][1]) % 2
                 secondBishopMoveModulo = (bishopLocations[1][0] + bishopLocations[1][1]) % 2
                 if firstBishopMoveModulo == secondBishopMoveModulo:
@@ -505,11 +559,23 @@ class Clock():
         self.blackBaseTime = blackBaseTime * 60
         self.blackIncrement = blackIncrement
 
+    def resetClock(self, whiteBaseTime, whiteIncrement, blackBaseTime, blackIncrement):
+        self.whiteBaseTime = whiteBaseTime * 60
+        self.whiteIncrement = whiteIncrement
+        self.blackBaseTime = blackBaseTime * 60
+        self.blackIncrement = blackIncrement
+
     def increment(self, color):
         if color == "w":
             self.whiteBaseTime = self.whiteBaseTime + self.whiteIncrement
         elif color == "b":
             self.blackBaseTime = self.blackBaseTime + self.blackIncrement
+
+    def decrement(self, color):
+        if color == "w":
+            self.whiteBaseTime = self.whiteBaseTime - self.whiteIncrement
+        elif color == "b":
+            self.blackBaseTime = self.blackBaseTime - self.blackIncrement
 
     def updateClock(self, color):
         if color == "w":

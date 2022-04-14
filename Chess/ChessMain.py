@@ -3,7 +3,7 @@ import pygame as p
 from Chess import ChessEngine
 from Chess import OtherStates
 
-#Project status: drag pieces to make move, comment code, multiplayer w/ server, lichess api, chess notation
+#Project status: drag pieces to make move, multiplayer w/ server, lichess api, chess notation
 #Current issue:
 
 SIZE_MULTIPLIER = 2 #suggested (in order of largest to smallest window size): 2, 8/3, 4
@@ -13,14 +13,14 @@ WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
 DIMENSION = 8
 SQ_SIZE = HEIGHT / DIMENSION
 FPS = 30
-IMAGES = []
+IMAGES = [] #once populated, indices 0-23: pieces alternating between standard and leipzig, 24-27: cover, red in-check dot, green possible-move dot, possible-capture target
 PIECES = ["bR", "bN", "bB", "bQ", "bK", "bp", "wp", "wR", "wN", "wB", "wQ", "wK"]
 BOARD_COLORS = {"coffee": [p.Color("burlywood"), p.Color("salmon4")], "greyscale": [p.Color("gray90"), p.Color("gray60")]}
-#turnLabel = "White's"
 
 def loadImages(pieceStyle):
-    #load standard pieces part 1
+    #load spritesheet of standard pieces
     stanPieces = OtherStates.SpriteSheet(p.image.load("images/standardpieces.png"), 2, 6)
+    #get part of spritesheet that is that specific standard piece
     standardwK = stanPieces.getSubImageByIndex(0, 0)
     standardwQ = stanPieces.getSubImageByIndex(0, 1)
     standardwB = stanPieces.getSubImageByIndex(0, 2)
@@ -34,7 +34,7 @@ def loadImages(pieceStyle):
     standardbR = stanPieces.getSubImageByIndex(1, 4)
     standardbp = stanPieces.getSubImageByIndex(1, 5)
     for piece in PIECES:
-        #load standard pieces part 2
+        #scale subimages and add to IMAGES array
         if piece[0] == "b":
             if piece[1] == "K":
                 IMAGES.append(p.transform.scale(standardbK, (SQ_SIZE, SQ_SIZE)))
@@ -61,8 +61,10 @@ def loadImages(pieceStyle):
                 IMAGES.append(p.transform.scale(standardwN, (SQ_SIZE, SQ_SIZE)))
             elif piece[1] == "p":
                 IMAGES.append(p.transform.scale(standardwp, (SQ_SIZE, SQ_SIZE)))
+        #for all pieces in PIECES array, load and add corresponding leipzig piece to IMAGES array
         IMAGES.append(p.transform.scale(p.image.load("images/leipzigPieces/leipzig" + piece +".png"), (SQ_SIZE, SQ_SIZE))) #load leipzig pieces
 
+    #load and add other non-piece images to IMAGES array
     IMAGES.append(p.transform.scale(p.image.load("images/cover.png"), (1563 / (2560 / WINDOW_WIDTH), 1042 / (1800 / WINDOW_HEIGHT))))
     IMAGES.append(p.transform.scale(p.image.load("images/reddot.png"), (SQ_SIZE, SQ_SIZE)))
     IMAGES.append(p.transform.scale(p.image.load("images/dot.png"), (SQ_SIZE, SQ_SIZE)))
@@ -79,7 +81,7 @@ def main():
     gs = ChessEngine.GameState()
     loadImages(ss.pieceStyle)
     running = True
-    menu_complete = run_menu(screen, clock, ms, ss, running) #runs menu and waits for something to be returned
+    menu_complete = run_menu(screen, clock, ms, ss, running) #runs menu loop and waits for cue to start game or close window
     if menu_complete:
         #game screen
         gameClock = ChessEngine.Clock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
@@ -96,6 +98,7 @@ def main():
         blackTimeout = False
         p.display.flip()
         legalMoves = gs.getLegalMoves()
+        #game loop
         while running:
             for e in p.event.get():
                 if e.type == p.QUIT:
@@ -115,19 +118,26 @@ def main():
                             for legalMove in legalMoves:
                                 if move == legalMove:
                                     if (legalMove.pawnPromotion) & (not ss.autoQueen):
+                                        choiceMade = False
                                         print("q for queen")
                                         print("n or k for knight")
                                         print("r for rook")
                                         print("b for bishop")
-                                        choice = input("Choose a piece to promote to: ")
-                                        if (choice == "q") | (choice == "Q"):
-                                            legalMove.promotionChoice = "Q"
-                                        if (choice == "n") | (choice == "N") | (choice == "k") | (choice == "K"):
-                                            legalMove.promotionChoice = "N"
-                                        if (choice == "r") | (choice == "R"):
-                                            legalMove.promotionChoice = "R"
-                                        if (choice == "b") | (choice == "B"):
-                                            legalMove.promotionChoice = "B"
+                                        while not choiceMade:
+                                            choice = p.event.wait()
+                                            if (choice.type == p.KEYDOWN):
+                                                if choice.key == p.K_q:
+                                                    legalMove.promotionChoice = "Q"
+                                                    choiceMade = True
+                                                elif (choice.key == p.K_n) | (choice.key == p.K_k):
+                                                    legalMove.promotionChoice = "N"
+                                                    choiceMade = True
+                                                elif choice.key == p.K_r:
+                                                    legalMove.promotionChoice = "R"
+                                                    choiceMade = True
+                                                elif choice.key == p.K_b:
+                                                    legalMove.promotionChoice = "B"
+                                                    choiceMade = True
                                     gs.makeMove(legalMove)
                                     tempFiftyMove = gs.fiftyMoveRuleDraw
                                     tempRepetition = gs.drawByRepetition
@@ -139,13 +149,30 @@ def main():
                                 playerClicks = [sqSelected]
                 elif (e.type == p.KEYDOWN) & (not gameComplete):
                     if e.key == p.K_BACKSPACE:
-                        if ss.undoMoveEnabled:
+                        if (ss.undoMoveEnabled) & (len(gs.moveLog) > 0):
+                            gameClock.decrement(gs.getTurnColor()) #prevents time gain from undoing a move
                             gs.undoMove()
                             moveMade = True
+                    if e.key == p.K_x: #reset gameState
+                        gs.resetGameState()
+                        gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
+                        whiteClockOn = True
+                        num_ticks = 0
+                        gameComplete = False
+                        sqSelected = ()
+                        playerClicks = []
+                        moveMade = False
+                        tempFiftyMove = False
+                        tempRepetition = False
+                        tempInsufficientMaterial = False
+                        whiteTimeout = False
+                        blackTimeout = False
+                        legalMoves = gs.getLegalMoves()
             if moveMade:
                 gameClock.increment(gs.getOppColor(gs.getTurnColor()))
                 whiteClockOn = not whiteClockOn
                 num_ticks = 0
+                animateMove(screen, gs, ss, clock)
                 legalMoves = gs.getLegalMoves()
                 moveMade = False
             if not gameComplete:
@@ -153,7 +180,6 @@ def main():
                     num_ticks = num_ticks + 1
                     if(num_ticks >= FPS):
                         gameClock.updateClock(gs.getTurnColor())
-                        print(str(gameClock.whiteBaseTime) + "  |  " + str(gameClock.blackBaseTime))
                         num_ticks = 0
                         if gameClock.whiteBaseTime == 0:
                             whiteTimeout = True
@@ -187,6 +213,7 @@ def main():
 def run_menu(screen, clock, ms, ss, running):
     screen.fill(p.Color("white"))
     p.display.flip()
+    printGameInstructions()
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
@@ -202,7 +229,7 @@ def run_menu(screen, clock, ms, ss, running):
                     return True
                 elif ms.settingsButton:
                     ms.settingsButton = False
-                    settings_complete = run_settings(screen, clock, ss, running)
+                    settings_complete = run_settings(screen, clock, ss, running) #runs settings loop and waits for cue to return to menu or close window
                     if not settings_complete:
                         return False
         drawMenuState(screen, ms)
@@ -226,6 +253,17 @@ def run_settings(screen, clock, ss, running):
         drawSettingsState(screen, ss)
         clock.tick(FPS)
         p.display.flip()
+
+def printGameInstructions():
+    print(" ")
+    print("Hello and welcome to Rohil's chess engine!")
+    print("Adjust your settings or start a game.")
+    print("Here are some keyboard controls you should know:")
+    print("If you have auto queen disabled, when promoting a pawn, use the q, r, n, and b keys to make your promotion choice.")
+    print("If you have undo move enabled, use the backspace key to undo a move.")
+    print("To reset the game at any time, press the x key.")
+    print("Good luck player and feel free to leave feedback!")
+    print(" ")
 
 def drawMenuState(screen, ms):
     screen.fill(p.Color("white"))
@@ -355,7 +393,7 @@ def drawEndOfGame(screen, state, color = "None"):
     rectSize = (text.get_width() * 1.5, text.get_height() * 2.5)
     rectPos = ((WIDTH - rectSize[0]) / 2, (HEIGHT - rectSize[1]) / 2)
     rect = p.Surface(rectSize)
-    rect.set_alpha(200)
+    rect.set_alpha(200) #set opacity
     rect.fill((0, 0, 0))
     screen.blit(rect, rectPos)
 
@@ -363,19 +401,19 @@ def drawEndOfGame(screen, state, color = "None"):
 
 def drawGameState(screen, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn):
     screen.fill(p.Color("white"))
-    drawBoard(screen, gs, ss, sqSelected, legalMoves)
+    drawBoard(screen, gs, ss)
+    if ss.highlightValidMoves:
+        drawSelected(screen, gs, sqSelected, legalMoves)
     drawPieces(screen, gs.board, ss.pieceStyle)
     renderMoveHistory(screen, gs)
     displayClock(screen, gameClock, whiteClockOn)
     #showTurn(screen, gs)
 
-def drawBoard(screen, gs, ss, sqSelected, legalMoves):
+def drawBoard(screen, gs, ss):
     colors = BOARD_COLORS[ss.boardColorScheme]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             p.draw.rect(screen, colors[(r + c) % 2], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
-    if ss.highlightValidMoves:
-        drawSelected(screen, gs, sqSelected, legalMoves)
     if gs.inCheck("w"):
         screen.blit(IMAGES[-3], p.Rect(gs.wKingLocation[1] * SQ_SIZE, gs.wKingLocation[0] * SQ_SIZE, SQ_SIZE, SQ_SIZE))
     if gs.inCheck("b"):
@@ -402,6 +440,36 @@ def drawSelected(screen, gs, sqSelected, legalMoves):
                         screen.blit(IMAGES[-2], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
                     elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
                         screen.blit(IMAGES[-1], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def animateMove(screen, gs, ss, clock):
+    frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
+    if (len(gs.moveLog) > 0) & (frameCount > 0):
+        animationFPS = 60
+        move = gs.moveLog[-1]
+        delta_r = move.endR - move.startR
+        delta_c = move.endC - move.startC
+        if ss.pieceStyle == "standard":
+            constant = 0
+        elif ss.pieceStyle == "leipzig":
+            constant = 1
+        for frame in range(frameCount + 1):
+            r, c = (move.startR + ((frame / frameCount) * delta_r), move.startC + ((frame / frameCount) * delta_c))
+            #draw board and pieces
+            drawBoard(screen, gs, ss)
+            drawPieces(screen, gs.board, ss.pieceStyle)
+            #erase start and end squares
+            startSquare = p.Rect(move.startC * SQ_SIZE, move.startR * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(move.startR + move.startC) % 2], startSquare)
+            endSquare = p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(move.endR + move.endC) % 2], endSquare)
+            #if piece will be captured, redraw captured piece
+            if move.pieceCaptured != "--":
+                screen.blit(IMAGES[(2 * PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            #draw moved piece at animated coordinates
+            screen.blit(IMAGES[(2 * PIECES.index(move.pieceMoved)) + constant], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+            p.display.flip()
+            clock.tick(animationFPS)
 
 def renderMoveHistory(screen, gs):
     TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (28 / 1280)), False, False)
@@ -454,12 +522,18 @@ def displayClock(screen, gameClock, whiteClockOn):
 
     #white clock
     p.draw.rect(screen, whiteColor, p.Rect(WHITE_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
-    whiteTimeText = TEXT_FONT.render(str(int(gameClock.whiteBaseTime / 60)) + ":" + str(int(gameClock.whiteBaseTime % 60)).zfill(2), 0, TEXT_COLOR)
+    white_hours = int(gameClock.whiteBaseTime / 3600)
+    white_minutes = int((gameClock.whiteBaseTime - (white_hours * 3600)) / 60)
+    white_seconds = int(gameClock.whiteBaseTime % 60)
+    whiteTimeText = TEXT_FONT.render(str(white_hours) + ":" + str(white_minutes).zfill(2) + ":" + str(white_seconds).zfill(2), 0, TEXT_COLOR)
     screen.blit(whiteTimeText, (WHITE_CLOCK_X + ((CLOCK_WIDTH - whiteTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - whiteTimeText.get_height()) / 2)))
 
     #black clock
     p.draw.rect(screen, blackColor, p.Rect(BLACK_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
-    blackTimeText = TEXT_FONT.render(str(int(gameClock.blackBaseTime / 60)) + ":" + str(int(gameClock.blackBaseTime % 60)).zfill(2), 0, TEXT_COLOR)
+    black_hours = int(gameClock.blackBaseTime / 3600)
+    black_minutes = int((gameClock.blackBaseTime - (black_hours * 3600)) / 60)
+    black_seconds = int(gameClock.blackBaseTime % 60)
+    blackTimeText = TEXT_FONT.render(str(black_hours) + ":" + str(black_minutes).zfill(2) + ":" + str(black_seconds).zfill(2), 0, TEXT_COLOR)
     screen.blit(blackTimeText, (BLACK_CLOCK_X + ((CLOCK_WIDTH - blackTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - blackTimeText.get_height()) / 2)))
 
     #draw white rotated label
@@ -471,23 +545,6 @@ def displayClock(screen, gameClock, whiteClockOn):
     blackTimeLabel = LABEL_FONT.render("BLACK", 0, TEXT_COLOR)
     blackTimeLabel = p.transform.rotate(blackTimeLabel, 90)
     screen.blit(blackTimeLabel, (BLACK_CLOCK_X + (0.1 * blackTimeLabel.get_width()), CLOCK_Y + ((CLOCK_HEIGHT - blackTimeLabel.get_height()) / 2)))
-
-def showTurn(screen, gs):
-    TEXT_SIZE = WINDOW_WIDTH * (28 / 1280)
-    TEXT_FONT = p.font.SysFont('calibri', TEXT_SIZE, True, False)
-    TEXTBOX_X = 10
-    TEXTBOX_Y = HEIGHT + 10
-    TEXT_COLOR = p.Color("black")
-    if gs.whiteToMove:
-        turnLabel = "White's"
-    else:
-        turnLabel = "Black's"
-    turn_screen = TEXT_FONT.render(turnLabel, 0, TEXT_COLOR)
-    turn_screen2 = TEXT_FONT.render("Turn", 0, TEXT_COLOR)
-    turn_rect = turn_screen.get_rect(center = ((WIDTH + WINDOW_WIDTH) / 2, ((HEIGHT + WINDOW_HEIGHT) / 2) - (TEXT_SIZE / 2)))
-    turn_rect2 = turn_screen2.get_rect(center = ((WIDTH + WINDOW_WIDTH) / 2, ((HEIGHT + WINDOW_HEIGHT) / 2) + (TEXT_SIZE / 2)))
-    screen.blit(turn_screen, turn_rect)
-    screen.blit(turn_screen2, turn_rect2)
 
 def getSettingButtonColor(ss, setting, state):
     SELECTED_COLOR = p.Color("black")

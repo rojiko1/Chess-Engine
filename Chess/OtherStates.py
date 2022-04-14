@@ -1,3 +1,5 @@
+#file includes the following classes: MenuState, SettingsState, and Spritesheet
+
 import pygame as p
 
 class MenuState():
