@@ -27,12 +27,12 @@ class SettingsState():
         self.buttonWidth = WINDOW_WIDTH * (170 / 1280)
         self.buttonHeight = WINDOW_HEIGHT * (60 / 800)
         self.backButtonLocation = (WINDOW_WIDTH - self.buttonWidth, WINDOW_HEIGHT - self.buttonHeight)
-        #self.flipBoardLocation = 1
         self.boardColorSchemeLocation = (0.2 * WINDOW_WIDTH, 0.32 * WINDOW_HEIGHT)
         self.moveHighlightingLocation = (0.2 * WINDOW_WIDTH, 0.57 * WINDOW_HEIGHT)
         self.autoQueenLocation = (0.2 * WINDOW_WIDTH, 0.82 * WINDOW_HEIGHT)
         self.pieceStyleLocation = ((0.8 * WINDOW_WIDTH) - (2 * self.buttonWidth), 0.32 * WINDOW_HEIGHT)
         self.undoMoveLocation = ((0.8 * WINDOW_WIDTH) - (2 * self.buttonWidth), 0.57 * WINDOW_HEIGHT)
+        self.flipBoardLocation = ((0.8 * WINDOW_WIDTH) - (2 * self.buttonWidth), 0.82 * WINDOW_HEIGHT)
 
         defaultSettings = open("defaultSettings.txt", "r")
         defaultSettingsLines = defaultSettings.readlines()
@@ -40,12 +40,12 @@ class SettingsState():
         self.numSettings = 5
         self.clockLength = 10
         self.clockIncrement = 10
-        self.flipBoard = False
         self.boardColorScheme = defaultSettingsLines[0][:-1]
         self.highlightValidMoves = eval(defaultSettingsLines[1])
         self.autoQueen = eval(defaultSettingsLines[2])
         self.pieceStyle = defaultSettingsLines[3][:-1]
         self.undoMoveEnabled = eval(defaultSettingsLines[4])
+        self.flipBoard = eval(defaultSettingsLines[5])
 
     def checkBackButtonPressed(self):
         if (self.backButtonLocation[0] < p.mouse.get_pos()[0] < (self.backButtonLocation[0] + self.buttonWidth)) & (self.backButtonLocation[1] < p.mouse.get_pos()[1] < (self.backButtonLocation[1] + self.buttonHeight)):
@@ -79,6 +79,11 @@ class SettingsState():
                 self.undoMoveEnabled = True
             else:
                 self.undoMoveEnabled = False
+        if (x > self.flipBoardLocation[0]) & (x < self.flipBoardLocation[0] + (2 * self.buttonWidth)) & (y > self.flipBoardLocation[1]) & (y < self.flipBoardLocation[1] + self.buttonHeight):
+            if x < (self.flipBoardLocation[0] + self.buttonWidth):
+                self.flipBoard = True
+            else:
+                self.flipBoard = False
 
 class SpriteSheet():
 

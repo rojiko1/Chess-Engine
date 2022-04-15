@@ -41,14 +41,14 @@ class GameState():
             if self.board[7][7] == "wR":
                 self.hasCastlingRight['wks'] = True
                 self.castlingRightLost['wks'] = -1
-            elif self.board[7][0] == "wR":
+            if self.board[7][0] == "wR":
                 self.hasCastlingRight['wqs'] = True
                 self.castlingRightLost['wqs'] = -1
-        elif self.bKingLocation == (0, 4):
+        if self.bKingLocation == (0, 4):
             if self.board[0][7] == "bR":
                 self.hasCastlingRight['bks'] = True
                 self.castlingRightLost['bks'] = -1
-            elif self.board[0][0] == "bR":
+            if self.board[0][0] == "bR":
                 self.hasCastlingRight['bqs'] = True
                 self.castlingRightLost['bqs'] = -1
         self.noCaptureCount = 0

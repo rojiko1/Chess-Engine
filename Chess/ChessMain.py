@@ -105,8 +105,8 @@ def main():
                     running = False
                 elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < WIDTH) & (p.mouse.get_pos()[1] < HEIGHT) & (not gameComplete):
                     location = p.mouse.get_pos()
-                    column = location[0] / SQ_SIZE
-                    row = location[1] / SQ_SIZE
+                    column = int(location[0] / SQ_SIZE)
+                    row = adjustForFlipBoard(int(location[1] / SQ_SIZE), gs.whiteToMove, ss.flipBoard)
                     if sqSelected == (row, column):
                         sqSelected = ()
                         playerClicks = []
@@ -224,7 +224,7 @@ def run_menu(screen, clock, ms, ss, running):
                 ms.checkSettingsButtonPressed()
                 if ms.startButton:
                     defaultSettings = open("defaultSettings.txt", "w")
-                    defaultSettings.write(ss.boardColorScheme + "\n" + str(ss.highlightValidMoves) + "\n" + str(ss.autoQueen) + "\n" + ss.pieceStyle + "\n" + str(ss.undoMoveEnabled))
+                    defaultSettings.write(ss.boardColorScheme + "\n" + str(ss.highlightValidMoves) + "\n" + str(ss.autoQueen) + "\n" + ss.pieceStyle + "\n" + str(ss.undoMoveEnabled) + "\n" + str(ss.flipBoard))
                     defaultSettings.close()
                     return True
                 elif ms.settingsButton:
@@ -259,9 +259,9 @@ def printGameInstructions():
     print("Hello and welcome to Rohil's chess engine!")
     print("Adjust your settings or start a game.")
     print("Here are some keyboard controls you should know:")
-    print("If you have auto queen disabled, when promoting a pawn, use the q, r, n, and b keys to make your promotion choice.")
-    print("If you have undo move enabled, use the backspace key to undo a move.")
-    print("To reset the game at any time, press the x key.")
+    print("If you have auto queen disabled, when promoting a pawn, use the 'q', 'r', 'n', and 'b' keys to make your promotion choice.")
+    print("If you have undo move enabled, use the 'backspace' key to undo a move.")
+    print("To reset the game at any time, press the 'x' key.")
     print("Good luck player and feel free to leave feedback!")
     print(" ")
 
@@ -292,12 +292,12 @@ def drawSettingsState(screen, ss):
     buttonWidth = ss.buttonWidth
     buttonHeight = ss.buttonHeight
     backLoc = ss.backButtonLocation
-    #flipBoardLoc = ss.flipBoardLocation
     boardColorSchemeLoc = ss.boardColorSchemeLocation
     moveHighlightingLoc = ss.moveHighlightingLocation
     autoQueenLoc = ss.autoQueenLocation
     pieceStyleLoc = ss.pieceStyleLocation
     undoMoveLoc = ss.undoMoveLocation
+    flipBoardLoc = ss.flipBoardLocation
 
     TITLE_TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (80 / 1280)), True, False)
     TITLE_TEXT_COLOR = p.Color("black")
@@ -364,6 +364,16 @@ def drawSettingsState(screen, ss):
     screen.blit(undoMoveOnText, (undoMoveLoc[0] + ((buttonWidth - undoMoveOnText.get_width()) / 2), undoMoveLoc[1] + ((buttonHeight - undoMoveOnText.get_height()) / 2)))
     screen.blit(undoMoveOffText, (undoMoveLoc[0] + buttonWidth + ((buttonWidth - undoMoveOffText.get_width()) / 2), undoMoveLoc[1] + ((buttonHeight - undoMoveOffText.get_height()) / 2)))
 
+    #draw Flip Board Enabling Settings buttons
+    flipBoardLabel = LABEL_FONT.render("Flip Board", 0, LABEL_COLOR)
+    p.draw.rect(screen, getSettingButtonColor(ss, "flipBoard", "on"), p.Rect(flipBoardLoc[0], flipBoardLoc[1], buttonWidth, buttonHeight))
+    flipBoardOnText = TEXT_FONT.render("Enabled", 0, TEXT_COLOR)
+    p.draw.rect(screen, getSettingButtonColor(ss, "flipBoard", "off"), p.Rect(flipBoardLoc[0] + buttonWidth, flipBoardLoc[1], buttonWidth, buttonHeight))
+    flipBoardOffText = TEXT_FONT.render("Disabled", 0, TEXT_COLOR)
+    screen.blit(flipBoardLabel, (flipBoardLoc[0] + (((2 * buttonWidth) - flipBoardLabel.get_width()) / 2), flipBoardLoc[1] - (1.5 * flipBoardLabel.get_height())))
+    screen.blit(flipBoardOnText, (flipBoardLoc[0] + ((buttonWidth - flipBoardOnText.get_width()) / 2), flipBoardLoc[1] + ((buttonHeight - flipBoardOnText.get_height()) / 2)))
+    screen.blit(flipBoardOffText, (flipBoardLoc[0] + buttonWidth + ((buttonWidth - flipBoardOffText.get_width()) / 2), flipBoardLoc[1] + ((buttonHeight - flipBoardOffText.get_height()) / 2)))
+
 def drawEndOfGame(screen, state, color = "None"):
     TEXT_COLOR = p.Color("white")
     TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (30 / 1280)), True, False)
@@ -403,43 +413,42 @@ def drawGameState(screen, gs, ss, sqSelected, legalMoves, gameClock, whiteClockO
     screen.fill(p.Color("white"))
     drawBoard(screen, gs, ss)
     if ss.highlightValidMoves:
-        drawSelected(screen, gs, sqSelected, legalMoves)
-    drawPieces(screen, gs.board, ss.pieceStyle)
+        drawSelected(screen, gs, ss, sqSelected, legalMoves)
+    drawPieces(screen, gs, ss)
     renderMoveHistory(screen, gs)
     displayClock(screen, gameClock, whiteClockOn)
-    #showTurn(screen, gs)
 
 def drawBoard(screen, gs, ss):
     colors = BOARD_COLORS[ss.boardColorScheme]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
-            p.draw.rect(screen, colors[(r + c) % 2], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            p.draw.rect(screen, colors[(adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) + c) % 2], p.Rect(c * SQ_SIZE, adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
     if gs.inCheck("w"):
         screen.blit(IMAGES[-3], p.Rect(gs.wKingLocation[1] * SQ_SIZE, gs.wKingLocation[0] * SQ_SIZE, SQ_SIZE, SQ_SIZE))
     if gs.inCheck("b"):
-        screen.blit(IMAGES[-3], p.Rect(gs.bKingLocation[1] * SQ_SIZE, gs.bKingLocation[0] * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        screen.blit(IMAGES[-3], p.Rect(gs.bKingLocation[1] * SQ_SIZE, adjustForFlipBoard(gs.bKingLocation[0], gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def drawPieces(screen, board, pieceStyle):
-    if pieceStyle == "standard":
+def drawPieces(screen, gs, ss):
+    if ss.pieceStyle == "standard":
         constant = 0
-    elif pieceStyle == "leipzig":
+    elif ss.pieceStyle == "leipzig":
         constant = 1
     for r in range(DIMENSION):
         for c in range(DIMENSION):
-            piece = board[r][c]
+            piece = gs.board[r][c]
             if piece != "--":
-               screen.blit(IMAGES[(2 * PIECES.index(piece)) + constant], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                screen.blit(IMAGES[(2 * PIECES.index(piece)) + constant], p.Rect(c * SQ_SIZE, adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def drawSelected(screen, gs, sqSelected, legalMoves):
+def drawSelected(screen, gs, ss, sqSelected, legalMoves):
     if (len(sqSelected) > 0):
         if gs.board[int(sqSelected[0])][int(sqSelected[1])][0] == gs.getTurnColor():
-            p.draw.rect(screen, p.Color("palegreen4"), p.Rect(int(sqSelected[1]) * SQ_SIZE, int(sqSelected[0]) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            p.draw.rect(screen, p.Color("palegreen4"), p.Rect(int(sqSelected[1]) * SQ_SIZE, adjustForFlipBoard(int(sqSelected[0]), gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
             for move in legalMoves:
                 if (move.startR == int(sqSelected[0])) & (move.startC == int(sqSelected[1])):
                     if move.pieceCaptured == "--":
-                        screen.blit(IMAGES[-2], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                        screen.blit(IMAGES[-2], p.Rect(move.endC * SQ_SIZE, adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
                     elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
-                        screen.blit(IMAGES[-1], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                        screen.blit(IMAGES[-1], p.Rect(move.endC * SQ_SIZE, adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 def animateMove(screen, gs, ss, clock):
     frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
@@ -456,20 +465,26 @@ def animateMove(screen, gs, ss, clock):
             r, c = (move.startR + ((frame / frameCount) * delta_r), move.startC + ((frame / frameCount) * delta_c))
             #draw board and pieces
             drawBoard(screen, gs, ss)
-            drawPieces(screen, gs.board, ss.pieceStyle)
+            drawPieces(screen, gs, ss)
             #erase start and end squares
-            startSquare = p.Rect(move.startC * SQ_SIZE, move.startR * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(move.startR + move.startC) % 2], startSquare)
-            endSquare = p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(move.endR + move.endC) % 2], endSquare)
+            startSquare = p.Rect(move.startC * SQ_SIZE, adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard) + move.startC) % 2], startSquare)
+            endSquare = p.Rect(move.endC * SQ_SIZE, adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            p.draw.rect(screen, BOARD_COLORS[ss.boardColorScheme][(adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) + move.endC) % 2], endSquare)
             #if piece will be captured, redraw captured piece
             if move.pieceCaptured != "--":
-                screen.blit(IMAGES[(2 * PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * SQ_SIZE, move.endR * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                screen.blit(IMAGES[(2 * PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * SQ_SIZE, adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
             #draw moved piece at animated coordinates
-            screen.blit(IMAGES[(2 * PIECES.index(move.pieceMoved)) + constant], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            screen.blit(IMAGES[(2 * PIECES.index(move.pieceMoved)) + constant], p.Rect(c * SQ_SIZE, adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
             p.display.flip()
             clock.tick(animationFPS)
+
+def adjustForFlipBoard(row, whiteTurn, flipBoard):
+    if flipBoard & (not whiteTurn):
+        return abs(7 - row)
+    else:
+        return row
 
 def renderMoveHistory(screen, gs):
     TEXT_FONT = p.font.SysFont('arial', int(WINDOW_WIDTH * (28 / 1280)), False, False)
@@ -557,7 +572,7 @@ def getSettingButtonColor(ss, setting, state):
             return SELECTED_COLOR
         else:
             return UNSELECTED_COLOR
-    if setting == "moveHighlighting":
+    elif setting == "moveHighlighting":
         if ((state == "on") & (ss.highlightValidMoves == True)) | ((state == "off") & (ss.highlightValidMoves == False)):
             return SELECTED_COLOR
         else:
@@ -576,6 +591,11 @@ def getSettingButtonColor(ss, setting, state):
             return UNSELECTED_COLOR
     elif setting == "undoMove":
         if ((state == "on") & (ss.undoMoveEnabled == True)) | ((state == "off") & (ss.undoMoveEnabled == False)):
+            return SELECTED_COLOR
+        else:
+            return UNSELECTED_COLOR
+    elif setting == "flipBoard":
+        if ((state == "on") & (ss.flipBoard == True)) | ((state == "off") & (ss.flipBoard == False)):
             return SELECTED_COLOR
         else:
             return UNSELECTED_COLOR
