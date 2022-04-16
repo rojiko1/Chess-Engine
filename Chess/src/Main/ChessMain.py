@@ -1,7 +1,8 @@
 import pygame as p
 
-from Chess import ChessEngine
-from Chess import OtherStates
+from Chess.src.Engine import ChessEngine
+from Chess.src.OtherStates import OtherStates
+from Chess.src.Server import Network
 
 #Project status: drag pieces to make move, multiplayer w/ server, lichess api, chess notation
 #Current issue:
@@ -19,7 +20,7 @@ BOARD_COLORS = {"coffee": [p.Color("burlywood"), p.Color("salmon4")], "greyscale
 
 def loadImages(pieceStyle):
     #load spritesheet of standard pieces
-    stanPieces = OtherStates.SpriteSheet(p.image.load("images/standardpieces.png"), 2, 6)
+    stanPieces = OtherStates.SpriteSheet(p.image.load("../../images/standardpieces.png"), 2, 6)
     #get part of spritesheet that is that specific standard piece
     standardwK = stanPieces.getSubImageByIndex(0, 0)
     standardwQ = stanPieces.getSubImageByIndex(0, 1)
@@ -62,13 +63,13 @@ def loadImages(pieceStyle):
             elif piece[1] == "p":
                 IMAGES.append(p.transform.scale(standardwp, (SQ_SIZE, SQ_SIZE)))
         #for all pieces in PIECES array, load and add corresponding leipzig piece to IMAGES array
-        IMAGES.append(p.transform.scale(p.image.load("images/leipzigPieces/leipzig" + piece +".png"), (SQ_SIZE, SQ_SIZE))) #load leipzig pieces
+        IMAGES.append(p.transform.scale(p.image.load("../../images/leipzigPieces/leipzig" + piece +".png"), (SQ_SIZE, SQ_SIZE))) #load leipzig pieces
 
     #load and add other non-piece images to IMAGES array
-    IMAGES.append(p.transform.scale(p.image.load("images/cover.png"), (1563 / (2560 / WINDOW_WIDTH), 1042 / (1800 / WINDOW_HEIGHT))))
-    IMAGES.append(p.transform.scale(p.image.load("images/reddot.png"), (SQ_SIZE, SQ_SIZE)))
-    IMAGES.append(p.transform.scale(p.image.load("images/dot.png"), (SQ_SIZE, SQ_SIZE)))
-    IMAGES.append(p.transform.scale(p.image.load("images/target.png"), (SQ_SIZE, SQ_SIZE)))
+    IMAGES.append(p.transform.scale(p.image.load("../../images/cover.png"), (1563 / (2560 / WINDOW_WIDTH), 1042 / (1800 / WINDOW_HEIGHT))))
+    IMAGES.append(p.transform.scale(p.image.load("../../images/reddot.png"), (SQ_SIZE, SQ_SIZE)))
+    IMAGES.append(p.transform.scale(p.image.load("../../images/dot.png"), (SQ_SIZE, SQ_SIZE)))
+    IMAGES.append(p.transform.scale(p.image.load("../../images/target.png"), (SQ_SIZE, SQ_SIZE)))
 
 def main():
     p.init()
@@ -84,6 +85,8 @@ def main():
     menu_complete = run_menu(screen, clock, ms, ss, running) #runs menu loop and waits for cue to start game or close window
     if menu_complete:
         #game screen
+        #n = Network.Network()
+        #startPos = n.getPos()
         gameClock = ChessEngine.Clock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
         whiteClockOn = True
         num_ticks = 0
@@ -223,7 +226,7 @@ def run_menu(screen, clock, ms, ss, running):
                 ms.checkStartButtonPressed()
                 ms.checkSettingsButtonPressed()
                 if ms.startButton:
-                    defaultSettings = open("defaultSettings.txt", "w")
+                    defaultSettings = open("../defaultSettings.txt", "w")
                     defaultSettings.write(ss.boardColorScheme + "\n" + str(ss.highlightValidMoves) + "\n" + str(ss.autoQueen) + "\n" + ss.pieceStyle + "\n" + str(ss.undoMoveEnabled) + "\n" + str(ss.flipBoard))
                     defaultSettings.close()
                     return True

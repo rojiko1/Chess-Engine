@@ -34,7 +34,7 @@ class SettingsState():
         self.undoMoveLocation = ((0.8 * WINDOW_WIDTH) - (2 * self.buttonWidth), 0.57 * WINDOW_HEIGHT)
         self.flipBoardLocation = ((0.8 * WINDOW_WIDTH) - (2 * self.buttonWidth), 0.82 * WINDOW_HEIGHT)
 
-        defaultSettings = open("defaultSettings.txt", "r")
+        defaultSettings = open("../defaultSettings.txt", "r")
         defaultSettingsLines = defaultSettings.readlines()
         defaultSettings.close()
         self.numSettings = 5
