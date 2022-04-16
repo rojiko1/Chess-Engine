@@ -15,6 +15,8 @@ except socket.error as e:
 s.listen(2)
 print("Server started, waiting for connection")
 
+
+
 def threaded_client(conn):
     conn.send(str.encode("Connected"))
     reply = ""

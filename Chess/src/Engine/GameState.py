@@ -1,6 +1,6 @@
-#file includes the following classes: GameState, Move, and Clock
-
 import copy
+
+from Chess.src.Engine.Move import Move
 
 class GameState():
 
@@ -477,7 +477,7 @@ class GameState():
                 moves.append(Move((r, c), (r, c - 2), self.board, castling = True))
         return moves
 
-class Move():
+'''class Move():
 
     ranksToRows = {"1": 7, "2": 6, "3": 5, "4": 4, "5": 3, "6": 2, "7": 1, "8": 0}
     rowsToRanks = {i: j for j, i in ranksToRows.items()}
@@ -549,9 +549,9 @@ class Move():
         self.notation = self.notation[:-1] + "#"
 
     def getRankFile(self, r, c):
-        return self.columnsToFiles[c] + self.rowsToRanks[r]
+        return self.columnsToFiles[c] + self.rowsToRanks[r]'''
 
-class Clock():
+'''class Clock():
 
     def __init__(self, whiteBaseTime, whiteIncrement, blackBaseTime, blackIncrement):
         self.whiteBaseTime = whiteBaseTime * 60
@@ -581,4 +581,4 @@ class Clock():
         if color == "w":
             self.whiteBaseTime = self.whiteBaseTime - 1
         elif color == "b":
-            self.blackBaseTime = self.blackBaseTime - 1
+            self.blackBaseTime = self.blackBaseTime - 1'''
