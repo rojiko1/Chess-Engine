@@ -4,7 +4,7 @@ from Chess.src.OtherStates.SpriteSheet import SpriteSheet
 
 class UserInterface():
 
-    SIZE_MULTIPLIER = 2 #suggested (in order of largest to smallest window size): 2, 8/3, 4
+    SIZE_MULTIPLIER = 8/3 #suggested (in order of largest to smallest window size): 2, 8/3, 4
     WINDOW_WIDTH = 2560 / SIZE_MULTIPLIER
     WINDOW_HEIGHT = 1800 / SIZE_MULTIPLIER
     WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
@@ -15,36 +15,43 @@ class UserInterface():
     PIECES = ["bR", "bN", "bB", "bQ", "bK", "bp", "wp", "wR", "wN", "wB", "wQ", "wK"]
     BOARD_COLORS = {"coffee": [p.Color("burlywood"), p.Color("salmon4")], "greyscale": [p.Color("gray90"), p.Color("gray60")]}
     
-    def __init__(self, ss):
+    def __init__(self):
         #initialize display
         p.init()
         self.screen = p.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
         self.screen.fill(p.Color("white"))
         p.display.set_caption("Chess Engine")
         self.clock = p.time.Clock()
-        self.loadImages(ss.pieceStyle)
+        self.loadImages()
 
         #menu screen
-        self.startButton = False
+        self.oneMultiplayerStartButton = False
+        self.twoMultiplayerStartButton = False
+        self.singlePlayerStartButton = False
         self.settingsButton = False
-        self.menuButtonWidth = self.WINDOW_WIDTH * (200 / 1280)
+        self.menuButtonWidth = self.WINDOW_WIDTH * (500 / 1280)
         self.menuButtonHeight = self.WINDOW_HEIGHT * (80 / 800)
-        self.startLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) - (self.WINDOW_WIDTH / 8), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.4)
-        self.settingsLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) + (self.WINDOW_WIDTH / 8), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.4)
+        self.oneMultiplayerStartLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) - (self.WINDOW_WIDTH / 4.5), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.5)
+        self.twoMultiplayerStartLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) + (self.WINDOW_WIDTH / 4.5), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.5)
+        self.singlePlayerStartLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) - (self.WINDOW_WIDTH / 4.5), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.2)
+        self.settingsLoc = (((self.WINDOW_WIDTH - self.menuButtonWidth) / 2) + (self.WINDOW_WIDTH / 4.5), (self.WINDOW_HEIGHT - self.menuButtonHeight) / 1.2)
 
         #settings screen
         self.backButton = False
         self.settingsButtonWidth = self.WINDOW_WIDTH * (170 / 1280)
         self.settingsButtonHeight = self.WINDOW_HEIGHT * (60 / 800)
+        #0.32, 0.57, 0.82
         self.backLoc = (self.WINDOW_WIDTH - self.settingsButtonWidth, self.WINDOW_HEIGHT - self.settingsButtonHeight)
-        self.boardColorSchemeLoc = (0.2 * self.WINDOW_WIDTH, 0.32 * self.WINDOW_HEIGHT)
-        self.moveHighlightingLoc = (0.2 * self.WINDOW_WIDTH, 0.57 * self.WINDOW_HEIGHT)
-        self.autoQueenLoc = (0.2 * self.WINDOW_WIDTH, 0.82 * self.WINDOW_HEIGHT)
-        self.pieceStyleLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.32 * self.WINDOW_HEIGHT)
-        self.undoMoveLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.57 * self.WINDOW_HEIGHT)
-        self.flipBoardLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.82 * self.WINDOW_HEIGHT)
+        self.boardColorSchemeLoc = (0.2 * self.WINDOW_WIDTH, 0.28 * self.WINDOW_HEIGHT)
+        self.moveHighlightingLoc = (0.2 * self.WINDOW_WIDTH, 0.47 * self.WINDOW_HEIGHT)
+        self.autoQueenLoc = (0.2 * self.WINDOW_WIDTH, 0.66 * self.WINDOW_HEIGHT)
+        self.pieceStyleLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.28 * self.WINDOW_HEIGHT)
+        self.undoMoveLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.47 * self.WINDOW_HEIGHT)
+        self.flipBoardLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.66 * self.WINDOW_HEIGHT)
+        self.baseTimeLoc = (0.2 * self.WINDOW_WIDTH, 0.85 * self.WINDOW_HEIGHT)
+        self.incrementTimeLoc = ((0.8 * self.WINDOW_WIDTH) - (2 * self.settingsButtonWidth), 0.85 * self.WINDOW_HEIGHT)
 
-    def loadImages(self, pieceStyle):
+    def loadImages(self):
         #load spritesheet of standard pieces
         stanPieces = SpriteSheet(p.image.load("../../images/standardpieces.png"), 2, 6)
         #get part of spritesheet that is that specific standard piece
@@ -115,21 +122,39 @@ class UserInterface():
         TEXT_COLOR = p.Color("white")
         buttonColor = p.Color("black")
 
-        #draw Start button
-        p.draw.rect(self.screen, buttonColor, p.Rect(self.startLoc[0], self.startLoc[1], self.menuButtonWidth, self.menuButtonHeight))
-        startText = TEXT_FONT.render("Start", 0, TEXT_COLOR)
-        self.screen.blit(startText, (self.startLoc[0] + ((self.menuButtonWidth - startText.get_width()) / 2), self.startLoc[1] + ((self.menuButtonHeight - startText.get_height()) / 2)))
+        #draw One Multiplayer Start button
+        p.draw.rect(self.screen, buttonColor, p.Rect(self.oneMultiplayerStartLoc[0], self.oneMultiplayerStartLoc[1], self.menuButtonWidth, self.menuButtonHeight))
+        startText = TEXT_FONT.render("Start Multiplayer - One Machine", 0, TEXT_COLOR)
+        self.screen.blit(startText, (self.oneMultiplayerStartLoc[0] + ((self.menuButtonWidth - startText.get_width()) / 2), self.oneMultiplayerStartLoc[1] + ((self.menuButtonHeight - startText.get_height()) / 2)))
+
+        #draw Two Multiplayer Start button
+        p.draw.rect(self.screen, buttonColor, p.Rect(self.twoMultiplayerStartLoc[0], self.twoMultiplayerStartLoc[1], self.menuButtonWidth, self.menuButtonHeight))
+        startText = TEXT_FONT.render("Start Multiplayer - Two Machines", 0, TEXT_COLOR)
+        self.screen.blit(startText, (self.twoMultiplayerStartLoc[0] + ((self.menuButtonWidth - startText.get_width()) / 2), self.twoMultiplayerStartLoc[1] + ((self.menuButtonHeight - startText.get_height()) / 2)))
+
+        #draw Single Player Start button
+        p.draw.rect(self.screen, buttonColor, p.Rect(self.singlePlayerStartLoc[0], self.singlePlayerStartLoc[1], self.menuButtonWidth, self.menuButtonHeight))
+        startText = TEXT_FONT.render("Start Single Player", 0, TEXT_COLOR)
+        self.screen.blit(startText, (self.singlePlayerStartLoc[0] + ((self.menuButtonWidth - startText.get_width()) / 2), self.singlePlayerStartLoc[1] + ((self.menuButtonHeight - startText.get_height()) / 2)))
 
         #draw Settings button
         p.draw.rect(self.screen, buttonColor, p.Rect(self.settingsLoc[0], self.settingsLoc[1], self.menuButtonWidth, self.menuButtonHeight))
         settingsText = TEXT_FONT.render("Settings", 0, TEXT_COLOR)
         self.screen.blit(settingsText, (self.settingsLoc[0] + ((self.menuButtonWidth - settingsText.get_width()) / 2), self.settingsLoc[1] + ((self.menuButtonHeight - settingsText.get_height()) / 2)))
 
-        self.screen.blit(self.IMAGES[-4], p.Rect((self.WINDOW_WIDTH - self.IMAGES[-4].get_width()) / 2, (self.startLoc[1] - self.IMAGES[-4].get_height()) / 2, self.IMAGES[-4].get_width(), self.IMAGES[-4].get_height()))
+        self.screen.blit(self.IMAGES[-4], p.Rect((self.WINDOW_WIDTH - self.IMAGES[-4].get_width()) / 2, (self.twoMultiplayerStartLoc[1] - self.IMAGES[-4].get_height()) / 2, self.IMAGES[-4].get_width(), self.IMAGES[-4].get_height()))
 
-    def checkStartButtonPressed(self):
-        if (self.startLoc[0] < p.mouse.get_pos()[0] < (self.startLoc[0] + self.menuButtonWidth)) & (self.startLoc[1] < p.mouse.get_pos()[1] < (self.startLoc[1] + self.menuButtonHeight)):
-            self.startButton = True
+    def checkOneMultiplayerStartButtonPressed(self):
+        if (self.oneMultiplayerStartLoc[0] < p.mouse.get_pos()[0] < (self.oneMultiplayerStartLoc[0] + self.menuButtonWidth)) & (self.oneMultiplayerStartLoc[1] < p.mouse.get_pos()[1] < (self.oneMultiplayerStartLoc[1] + self.menuButtonHeight)):
+            self.oneMultiplayerStartButton = True
+
+    def checkTwoMultiplayerStartButtonPressed(self):
+        if (self.twoMultiplayerStartLoc[0] < p.mouse.get_pos()[0] < (self.twoMultiplayerStartLoc[0] + self.menuButtonWidth)) & (self.twoMultiplayerStartLoc[1] < p.mouse.get_pos()[1] < (self.twoMultiplayerStartLoc[1] + self.menuButtonHeight)):
+            self.twoMultiplayerStartButton = True
+
+    def checkSinglePlayerStartButtonPressed(self):
+        if (self.singlePlayerStartLoc[0] < p.mouse.get_pos()[0] < (self.singlePlayerStartLoc[0] + self.menuButtonWidth)) & (self.singlePlayerStartLoc[1] < p.mouse.get_pos()[1] < (self.singlePlayerStartLoc[1] + self.menuButtonHeight)):
+            self.singlePlayerStartButton = True
 
     def checkSettingsButtonPressed(self):
         if (self.settingsLoc[0] < p.mouse.get_pos()[0] < (self.settingsLoc[0] + self.menuButtonWidth)) & (self.settingsLoc[1] < p.mouse.get_pos()[1] < (self.settingsLoc[1] + self.menuButtonHeight)):
@@ -171,26 +196,26 @@ class UserInterface():
 
         self.screen.blit(text, (rectPos[0] + ((rectSize[0] - text.get_width()) / 2), rectPos[1] + ((rectSize[1] - text.get_height()) / 2)))
 
-    def drawGameState(self, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn):
+    def drawGameState(self, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode):
         self.screen.fill(p.Color("white"))
-        self.drawBoard(gs, ss)
+        self.drawBoard(gs, ss, mode)
         if ss.highlightValidMoves:
-            self.drawSelected(gs, ss, sqSelected, legalMoves)
-        self.drawPieces(gs, ss)
+            self.drawSelected(gs, ss, sqSelected, legalMoves, mode)
+        self.drawPieces(gs, ss, mode)
         self.renderMoveHistory(gs)
         self.displayClock(gameClock, whiteClockOn)
 
-    def drawBoard(self, gs, ss):
+    def drawBoard(self, gs, ss, mode):
         colors = self.BOARD_COLORS[ss.boardColorScheme]
         for r in range(self.DIMENSION):
             for c in range(self.DIMENSION):
-                p.draw.rect(self.screen, colors[(self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) + c) % 2], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                p.draw.rect(self.screen, colors[(self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) + c) % 2], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
         if gs.inCheck("w"):
             self.screen.blit(self.IMAGES[-3], p.Rect(gs.wKingLocation[1] * self.SQ_SIZE, gs.wKingLocation[0] * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
         if gs.inCheck("b"):
-            self.screen.blit(self.IMAGES[-3], p.Rect(gs.bKingLocation[1] * self.SQ_SIZE, self.adjustForFlipBoard(gs.bKingLocation[0], gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+            self.screen.blit(self.IMAGES[-3], p.Rect(gs.bKingLocation[1] * self.SQ_SIZE, self.adjustForFlipBoard(gs.bKingLocation[0], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
-    def drawPieces(self, gs, ss):
+    def drawPieces(self, gs, ss, mode):
         if ss.pieceStyle == "standard":
             constant = 0
         elif ss.pieceStyle == "leipzig":
@@ -199,20 +224,20 @@ class UserInterface():
             for c in range(self.DIMENSION):
                 piece = gs.board[r][c]
                 if piece != "--":
-                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(piece)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(piece)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
-    def drawSelected(self, gs, ss, sqSelected, legalMoves):
+    def drawSelected(self, gs, ss, sqSelected, legalMoves, mode):
         if (len(sqSelected) > 0):
             if gs.board[int(sqSelected[0])][int(sqSelected[1])][0] == gs.getTurnColor():
-                p.draw.rect(self.screen, p.Color("palegreen4"), p.Rect(int(sqSelected[1]) * self.SQ_SIZE, self.adjustForFlipBoard(int(sqSelected[0]), gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                p.draw.rect(self.screen, p.Color("palegreen4"), p.Rect(int(sqSelected[1]) * self.SQ_SIZE, self.adjustForFlipBoard(int(sqSelected[0]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                 for move in legalMoves:
                     if (move.startR == int(sqSelected[0])) & (move.startC == int(sqSelected[1])):
                         if move.pieceCaptured == "--":
-                            self.screen.blit(self.IMAGES[-2], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                            self.screen.blit(self.IMAGES[-2], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                         elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
-                            self.screen.blit(self.IMAGES[-1], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                            self.screen.blit(self.IMAGES[-1], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
-    def animateMove(self, gs, ss):
+    def animateMove(self, gs, ss, mode):
         frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
         if (len(gs.moveLog) > 0) & (frameCount > 0):
             animationFPS = 60
@@ -226,27 +251,33 @@ class UserInterface():
             for frame in range(frameCount + 1):
                 r, c = (move.startR + ((frame / frameCount) * delta_r), move.startC + ((frame / frameCount) * delta_c))
                 #draw board and pieces
-                self.drawBoard(gs, ss)
-                self.drawPieces(gs, ss)
+                self.drawBoard(gs, ss, mode)
+                self.drawPieces(gs, ss, mode)
                 #erase start and end squares
-                startSquare = p.Rect(move.startC * self.SQ_SIZE, self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard) + move.startC) % 2], startSquare)
-                endSquare = p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) + move.endC) % 2], endSquare)
+                startSquare = p.Rect(move.startC * self.SQ_SIZE, self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) + move.startC) % 2], startSquare)
+                endSquare = p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) + move.endC) % 2], endSquare)
                 #if piece will be captured, redraw captured piece
                 if move.pieceCaptured != "--":
-                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                 #draw moved piece at animated coordinates
-                self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
                 self.flipDisplay()
                 self.tickClock(FPS = animationFPS)
 
-    def adjustForFlipBoard(self, row, whiteTurn, flipBoard):
-        if flipBoard & (not whiteTurn):
-            return abs(7 - row)
-        else:
-            return row
+    def adjustForFlipBoard(self, row, whiteTurn, flipBoard, mode):
+        if mode == "oneMultiplayer":
+            if flipBoard & (not whiteTurn):
+                return abs(7 - row)
+            else:
+                return row
+        elif mode == "twoMultiplayer":
+            if flipBoard:
+                return abs(7 - row)
+            else:
+                return row
 
     def renderMoveHistory(self, gs):
         TEXT_FONT = p.font.SysFont('arial', int(self.WINDOW_WIDTH * (28 / 1280)), False, False)
@@ -403,6 +434,16 @@ class UserInterface():
         self.screen.blit(flipBoardOnText, (self.flipBoardLoc[0] + ((self.settingsButtonWidth - flipBoardOnText.get_width()) / 2), self.flipBoardLoc[1] + ((self.settingsButtonHeight - flipBoardOnText.get_height()) / 2)))
         self.screen.blit(flipBoardOffText, (self.flipBoardLoc[0] + self.settingsButtonWidth + ((self.settingsButtonWidth - flipBoardOffText.get_width()) / 2), self.flipBoardLoc[1] + ((self.settingsButtonHeight - flipBoardOffText.get_height()) / 2)))
 
+        #draw Clock Time Change buttons
+        changeTimeLabel = LABEL_FONT.render("Current time: " + str(ss.clockLength) + "+" + str(ss.clockIncrement), 0, LABEL_COLOR)
+        p.draw.rect(self.screen, p.Color("black"), p.Rect(self.baseTimeLoc[0], self.baseTimeLoc[1], 2 * self.settingsButtonWidth, self.settingsButtonHeight))
+        changeBaseTimeText = TEXT_FONT.render("Change Base Time", 0, TEXT_COLOR)
+        p.draw.rect(self.screen, p.Color("black"), p.Rect(self.incrementTimeLoc[0], self.incrementTimeLoc[1], 2 * self.settingsButtonWidth, self.settingsButtonHeight))
+        changeIncrementTimeText = TEXT_FONT.render("Change Increment Time", 0, TEXT_COLOR)
+        self.screen.blit(changeTimeLabel, ((self.WINDOW_WIDTH - changeTimeLabel.get_width()) / 2, self.baseTimeLoc[1] - (1.5 * changeTimeLabel.get_height())))
+        self.screen.blit(changeBaseTimeText, (self.baseTimeLoc[0] + (((2 * self.settingsButtonWidth) - changeBaseTimeText.get_width()) / 2), self.baseTimeLoc[1] + ((self.settingsButtonHeight - changeBaseTimeText.get_height()) / 2)))
+        self.screen.blit(changeIncrementTimeText, (self.incrementTimeLoc[0] + (((2 * self.settingsButtonWidth) - changeIncrementTimeText.get_width()) / 2), self.incrementTimeLoc[1] + ((self.settingsButtonHeight - changeIncrementTimeText.get_height()) / 2)))
+
     def getSettingButtonColor(self, ss, setting, state):
         SELECTED_COLOR = p.Color("black")
         UNSELECTED_COLOR = p.Color("gray")
@@ -446,6 +487,29 @@ class UserInterface():
         if (self.backLoc[0] < p.mouse.get_pos()[0] < (self.backLoc[0] + self.settingsButtonWidth)) & (self.backLoc[1] < p.mouse.get_pos()[1] < (self.backLoc[1] + self.settingsButtonHeight)):
             self.backButton = True
 
+    def changeBaseTime(self, ss):
+        while True:
+            new_time = input("Enter a new base time (minutes): ")
+            new_time = float(new_time)
+            new_time = int(new_time)
+            if type(new_time) is int:
+                if (new_time >= 1) & (new_time <= 180):
+                    ss.clockLength = new_time
+                    break
+            else:
+                print("Provided base time is invalid.")
+
+    def changeIncrementTime(self, ss):
+        while True:
+            new_time = input("Enter a new increment time (seconds): ")
+            new_time = int(new_time)
+            if type(new_time) is int:
+                if (new_time >= 0) & (new_time <= 120):
+                    ss.clockIncrement = new_time
+                    break
+            else:
+                print("Provided increment time is invalid.")
+
     def evaluateSettingsChanges(self, ss):
         x = p.mouse.get_pos()[0]
         y = p.mouse.get_pos()[1]
@@ -479,6 +543,10 @@ class UserInterface():
                 ss.flipBoard = True
             else:
                 ss.flipBoard = False
+        if (x > self.baseTimeLoc[0]) & (x < self.baseTimeLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.baseTimeLoc[1]) & (y < self.baseTimeLoc[1] + self.settingsButtonHeight):
+            self.changeBaseTime(ss)
+        if (x > self.incrementTimeLoc[0]) & (x < self.incrementTimeLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.incrementTimeLoc[1]) & (y < self.incrementTimeLoc[1] + self.settingsButtonHeight):
+            self.changeIncrementTime(ss)
 
 
     def fillScreenWithWhite(self):
