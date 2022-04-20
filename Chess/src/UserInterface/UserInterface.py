@@ -107,11 +107,11 @@ class UserInterface():
     def printGameInstructions(self):
         print(" ")
         print("Hello and welcome to Rohil's chess engine!")
-        print("Adjust your settings or start a game.")
+        print("Adjust your settings or start a game. Note that some settings are pre-set for the two-machine multiplayer game mode.")
         print("Here are some keyboard controls you should know:")
         print("If you have auto queen disabled, when promoting a pawn, use the 'q', 'r', 'n', and 'b' keys to make your promotion choice.")
-        print("If you have undo move enabled, use the 'backspace' key to undo a move.")
-        print("To reset the game at any time, press the 'x' key.")
+        print("If you have undo move enabled, use the 'backspace' key to undo a move. This setting is not available in the two-machine multiplayer game mode.")
+        print("To reset the game at any time in the one-machine multiplayer or single player game modes, press the 'x' key.")
         print("Good luck player and feel free to leave feedback!")
         print(" ")
 
@@ -209,11 +209,21 @@ class UserInterface():
         colors = self.BOARD_COLORS[ss.boardColorScheme]
         for r in range(self.DIMENSION):
             for c in range(self.DIMENSION):
-                p.draw.rect(self.screen, colors[(self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) + c) % 2], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                p.draw.rect(self.screen, colors[(self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard,
+                                                                         mode) + self.adjustForFlipBoard(c,
+                                                                                                         gs.whiteToMove,
+                                                                                                         ss.flipBoard,
+                                                                                                         mode)) % 2], p.Rect(
+                    self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                        r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
         if gs.inCheck("w"):
-            self.screen.blit(self.IMAGES[-3], p.Rect(gs.wKingLocation[1] * self.SQ_SIZE, gs.wKingLocation[0] * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+            self.screen.blit(self.IMAGES[-3], p.Rect(
+                self.adjustForFlipBoard(gs.wKingLocation[1], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                    gs.wKingLocation[0], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
         if gs.inCheck("b"):
-            self.screen.blit(self.IMAGES[-3], p.Rect(gs.bKingLocation[1] * self.SQ_SIZE, self.adjustForFlipBoard(gs.bKingLocation[0], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+            self.screen.blit(self.IMAGES[-3], p.Rect(
+                self.adjustForFlipBoard(gs.bKingLocation[1], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                    gs.bKingLocation[0], gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
     def drawPieces(self, gs, ss, mode):
         if ss.pieceStyle == "standard":
@@ -224,18 +234,26 @@ class UserInterface():
             for c in range(self.DIMENSION):
                 piece = gs.board[r][c]
                 if piece != "--":
-                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(piece)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(piece)) + constant], p.Rect(
+                        self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                            r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
     def drawSelected(self, gs, ss, sqSelected, legalMoves, mode):
         if (len(sqSelected) > 0):
             if gs.board[int(sqSelected[0])][int(sqSelected[1])][0] == gs.getTurnColor():
-                p.draw.rect(self.screen, p.Color("palegreen4"), p.Rect(int(sqSelected[1]) * self.SQ_SIZE, self.adjustForFlipBoard(int(sqSelected[0]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                p.draw.rect(self.screen, p.Color("palegreen4"), p.Rect(
+                    self.adjustForFlipBoard(int(sqSelected[1]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                        int(sqSelected[0]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                 for move in legalMoves:
                     if (move.startR == int(sqSelected[0])) & (move.startC == int(sqSelected[1])):
                         if move.pieceCaptured == "--":
-                            self.screen.blit(self.IMAGES[-2], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                            self.screen.blit(self.IMAGES[-2], p.Rect(
+                                self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                                    move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                         elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
-                            self.screen.blit(self.IMAGES[-1], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                            self.screen.blit(self.IMAGES[-1], p.Rect(
+                                self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                                    move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
     def animateMove(self, gs, ss, mode):
         frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
@@ -254,30 +272,46 @@ class UserInterface():
                 self.drawBoard(gs, ss, mode)
                 self.drawPieces(gs, ss, mode)
                 #erase start and end squares
-                startSquare = p.Rect(move.startC * self.SQ_SIZE, self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) + move.startC) % 2], startSquare)
-                endSquare = p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) + move.endC) % 2], endSquare)
+                startSquare = p.Rect(
+                    self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                        move.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR,
+                                                                                                         gs.whiteToMove,
+                                                                                                         ss.flipBoard,
+                                                                                                         mode) + self.adjustForFlipBoard(
+                    move.startC, gs.whiteToMove, ss.flipBoard, mode)) % 2], startSquare)
+                endSquare = p.Rect(
+                    self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                        move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR,
+                                                                                                         gs.whiteToMove,
+                                                                                                         ss.flipBoard,
+                                                                                                         mode) + self.adjustForFlipBoard(
+                    move.endC, gs.whiteToMove, ss.flipBoard, mode)) % 2], endSquare)
                 #if piece will be captured, redraw captured piece
                 if move.pieceCaptured != "--":
-                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(move.endC * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(
+                        self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                            move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
                 #draw moved piece at animated coordinates
-                self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(c * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(
+                    self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(
+                        r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
                 self.flipDisplay()
                 self.tickClock(FPS = animationFPS)
 
-    def adjustForFlipBoard(self, row, whiteTurn, flipBoard, mode):
+    def adjustForFlipBoard(self, num, whiteTurn, flipBoard, mode):
         if mode == "oneMultiplayer":
             if flipBoard & (not whiteTurn):
-                return abs(7 - row)
+                return abs(7 - num)
             else:
-                return row
+                return num
         elif mode == "twoMultiplayer":
             if flipBoard:
-                return abs(7 - row)
+                return abs(7 - num)
             else:
-                return row
+                return num
 
     def renderMoveHistory(self, gs):
         TEXT_FONT = p.font.SysFont('arial', int(self.WINDOW_WIDTH * (28 / 1280)), False, False)

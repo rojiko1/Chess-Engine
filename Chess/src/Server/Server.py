@@ -25,14 +25,22 @@ class Server():
         p.init()
         clock = p.time.Clock()
 
+        self.defaultBaseTime = 10
+        self.defaultIncrementTime = 10
+
         self.gameState = GameState()
         self.colors = ["w", "b"]
-        self.gameClock = Clock(0.5, 0, 0.5, 0)
+        self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
         self.whiteClockOn = True
         self.num_ticks = 0
         self.whiteTimeout = False
         self.blackTimeout = False
         self.gameComplete = False
+        self.checkmate = False
+        self.stalemate = False
+        self.resetGame = False
+        self.wRequestReset = False
+        self.bRequestReset = False
 
         whiteTaken = False
         blackTaken = False
@@ -49,6 +57,18 @@ class Server():
                     elif self.gameClock.blackBaseTime == 0:
                         self.blackTimeout = True
                         self.gameComplete = True
+            if self.wRequestReset & self.bRequestReset:
+                self.resetGame = True
+                self.gameState = GameState()
+                self.colors = ["w", "b"]
+                self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
+                self.whiteClockOn = True
+                self.num_ticks = 0
+                self.whiteTimeout = False
+                self.blackTimeout = False
+                self.gameComplete = False
+                self.checkmate = False
+                self.stalemate = False
             if (not whiteTaken) | (not blackTaken):
                 conn, addr = s.accept()
                 print("Connected to: ", addr)
@@ -81,7 +101,6 @@ class Server():
                     reply = self.colors[currentPlayer]
                 elif data == "Requesting Clock":
                     reply = self.gameClock
-                    #reply = [self.gameClock.whiteBaseTime, self.gameClock.blackBaseTime]
                 elif data == "Increment w":
                     self.gameClock.increment("w")
                     reply = "incremented white"
@@ -93,6 +112,21 @@ class Server():
                         reply = "white timeout"
                     elif self.blackTimeout:
                         reply = "black timeout"
+                elif data == "w Requesting Reset Game":
+                    self.wRequestReset = True
+                    reply = "Request Recieved"
+                elif data == "b Requesting Reset Game":
+                    self.bRequestReset = True
+                    reply = "Request Recieved"
+                elif data[2:] == "Requesting Reset Game Status":
+                    reply = self.resetGame
+                    if self.resetGame:
+                        if data[0] == "w":
+                            self.wRequestReset = False
+                        elif data[0] == "b":
+                            self.bRequestReset = False
+                        if (not self.wRequestReset) & (not self.bRequestReset):
+                            self.resetGame = False
                 if not data:
                     print("Disconnected")
                     break

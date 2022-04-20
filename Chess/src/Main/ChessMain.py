@@ -8,7 +8,7 @@ from Chess.src.UserInterface.UserInterface import UserInterface
 from Chess.src.Server.Network import Network
 
 #Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation
-#Current issue: start server from multiplayer, premove, end game communication
+#Current issue: start server from multiplayer, premove, game management when players disconnect
 
 def main():
     ss = SettingsState()
@@ -102,7 +102,7 @@ def run_single_machine_multiplayer(ss, ui, running):
                 running = False
             elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
                 location = p.mouse.get_pos()
-                column = int(location[0] / ui.SQ_SIZE)
+                column = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
                 row = ui.adjustForFlipBoard(int(location[1] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
                 if sqSelected == (row, column):
                     sqSelected = ()
@@ -220,8 +220,6 @@ def run_two_machine_multiplayer(ss, ui, running):
         ss.flipBoard = False
     else:
         ss.flipBoard = True
-    ss.clockLength = 10
-    ss.clockIncrement = 10
 
     whiteClockOn = True
     gameComplete = False
@@ -238,97 +236,86 @@ def run_two_machine_multiplayer(ss, ui, running):
     legalMoves = gs.getLegalMoves()
     #game loop
     while running:
-        gameClock = n.send("Requesting Clock")
-        timeout = n.send("Requesting Timeout")
-        if timeout == "white timeout":
-            whiteTimeout = True
-        elif timeout == "black timeout":
-            blackTimeout = True
-        if myColor == gs.getTurnColor():
-            #inside turn loop
-            if not generatedLegalMoves:
-                legalMoves = gs.getLegalMoves()
-                generatedLegalMoves = True
-            for e in p.event.get():
-                if e.type == p.QUIT:
-                    running = False
-                elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
-                    location = p.mouse.get_pos()
-                    column = int(location[0] / ui.SQ_SIZE)
-                    row = ui.adjustForFlipBoard(int(location[1] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
-                    if sqSelected == (row, column):
-                        sqSelected = ()
-                        playerClicks = []
-                    else:
-                        sqSelected = (row, column)
-                        playerClicks.append(sqSelected)
-                        if len(playerClicks) == 2:
-                            move = Move(playerClicks[0], playerClicks[1], gs.board)
-                            for legalMove in legalMoves:
-                                if move == legalMove:
-                                    if (legalMove.pawnPromotion) & (not ss.autoQueen):
-                                        choiceMade = False
-                                        print("q for queen")
-                                        print("n or k for knight")
-                                        print("r for rook")
-                                        print("b for bishop")
-                                        while not choiceMade:
-                                            choice = p.event.wait()
-                                            if (choice.type == p.KEYDOWN):
-                                                if choice.key == p.K_q:
-                                                    legalMove.promotionChoice = "Q"
-                                                    choiceMade = True
-                                                elif (choice.key == p.K_n) | (choice.key == p.K_k):
-                                                    legalMove.promotionChoice = "N"
-                                                    choiceMade = True
-                                                elif choice.key == p.K_r:
-                                                    legalMove.promotionChoice = "R"
-                                                    choiceMade = True
-                                                elif choice.key == p.K_b:
-                                                    legalMove.promotionChoice = "B"
-                                                    choiceMade = True
-                                    gs.makeMove(legalMove)
-                                    tempFiftyMove = gs.fiftyMoveRuleDraw
-                                    tempRepetition = gs.drawByRepetition
-                                    tempInsufficientMaterial = gs.insufficientMaterial
-                                    moveMade = True
-                                    sqSelected = ()
-                                    playerClicks = []
-                            if not moveMade:
-                                playerClicks = [sqSelected]
-                elif (e.type == p.KEYDOWN) & (not gameComplete):
-                    if e.key == p.K_BACKSPACE:
-                        if (ss.undoMoveEnabled) & (len(gs.moveLog) > 0):
-                            gameClock.decrement(gs.getTurnColor()) #prevents time gain from undoing a move
-                            gs.undoMove()
-                            moveMade = True
-                    if e.key == p.K_x: #reset gameState
-                        gs.resetGameState()
-                        gameComplete = False
-                        sqSelected = ()
-                        playerClicks = []
-                        moveMade = False
-                        tempFiftyMove = False
-                        tempRepetition = False
-                        tempInsufficientMaterial = False
-                        whiteTimeout = False
-                        blackTimeout = False
-                        legalMoves = gs.getLegalMoves()
-            if moveMade:
-                msg = n.send("Increment " + myColor)
-                ui.animateMove(gs, ss, mode)
-                generatedLegalMoves = False
-                moveMade = False
-                msg = n.send(gs)
-        elif myColor != gs.getTurnColor():
-            for e in p.event.get():
-                if e.type == p.QUIT:
-                    running = False
-                elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
-                    print("Not your turn")
-            gs = n.send("Requesting GameState")
         if not gameComplete:
+            gameClock = n.send("Requesting Clock")
+            if gameClock.whiteBaseTime == 0:
+                whiteTimeout = True
+            elif gameClock.blackBaseTime == 0:
+                blackTimeout = True
+            if myColor == gs.getTurnColor():
+                #inside turn loop
+                if not generatedLegalMoves:
+                    if ((myColor == "w") & (not whiteClockOn)) | ((myColor == "b") & (whiteClockOn)):
+                        whiteClockOn = not whiteClockOn
+                    legalMoves = gs.getLegalMoves()
+                    generatedLegalMoves = True
+                for e in p.event.get():
+                    if e.type == p.QUIT:
+                        running = False
+                    elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
+                        location = p.mouse.get_pos()
+                        column = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard,
+                                                       mode)
+                        row = ui.adjustForFlipBoard(int(location[1] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
+                        if sqSelected == (row, column):
+                            sqSelected = ()
+                            playerClicks = []
+                        else:
+                            sqSelected = (row, column)
+                            playerClicks.append(sqSelected)
+                            if len(playerClicks) == 2:
+                                move = Move(playerClicks[0], playerClicks[1], gs.board)
+                                for legalMove in legalMoves:
+                                    if move == legalMove:
+                                        if (legalMove.pawnPromotion) & (not ss.autoQueen):
+                                            choiceMade = False
+                                            print("q for queen")
+                                            print("n or k for knight")
+                                            print("r for rook")
+                                            print("b for bishop")
+                                            while not choiceMade:
+                                                choice = p.event.wait()
+                                                if (choice.type == p.KEYDOWN):
+                                                    if choice.key == p.K_q:
+                                                        legalMove.promotionChoice = "Q"
+                                                        choiceMade = True
+                                                    elif (choice.key == p.K_n) | (choice.key == p.K_k):
+                                                        legalMove.promotionChoice = "N"
+                                                        choiceMade = True
+                                                    elif choice.key == p.K_r:
+                                                        legalMove.promotionChoice = "R"
+                                                        choiceMade = True
+                                                    elif choice.key == p.K_b:
+                                                        legalMove.promotionChoice = "B"
+                                                        choiceMade = True
+                                        gs.makeMove(legalMove)
+                                        tempFiftyMove = gs.fiftyMoveRuleDraw
+                                        tempRepetition = gs.drawByRepetition
+                                        tempInsufficientMaterial = gs.insufficientMaterial
+                                        moveMade = True
+                                        sqSelected = ()
+                                        playerClicks = []
+                                if not moveMade:
+                                    playerClicks = [sqSelected]
+                if moveMade:
+                    msg = n.send("Increment " + myColor)
+                    ui.animateMove(gs, ss, mode)
+                    generatedLegalMoves = False
+                    moveMade = False
+                    whiteClockOn = not whiteClockOn
+                    gs.getLegalMoves()
+                    msg = n.send(gs)
+            elif myColor != gs.getTurnColor():
+                for e in p.event.get():
+                    if e.type == p.QUIT:
+                        running = False
+                    elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
+                        print("Not your turn")
+                gs = n.send("Requesting GameState")
+
             ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode)
+            if gs.checkmate | gs.stalemate:
+                ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, not gs.whiteToMove, mode)
             if gs.checkmate:
                 gameComplete = True
                 ui.drawEndOfGame("checkmate", color = gs.getOppColor(gs.getTurnColor()))
@@ -350,6 +337,30 @@ def run_two_machine_multiplayer(ss, ui, running):
             elif blackTimeout:
                 gameComplete = True
                 ui.drawEndOfGame("blackTimeout")
+
+        if gameComplete:
+            resetGame = n.send(myColor + " Requesting Reset Game Status")
+            for e in p.event.get():
+                if e.type == p.QUIT:
+                    running = False
+                elif (e.type == p.KEYDOWN):
+                    if e.key == p.K_x: #reset gameState
+                        msg = n.send(myColor + " Requesting Reset Game")
+                        print("Game Reset Request Sent.")
+            if resetGame:
+                gs = n.send("Requesting GameState")
+                whiteClockOn = True
+                gameComplete = False
+                sqSelected = ()
+                playerClicks = []
+                moveMade = False
+                generatedLegalMoves = False
+                tempFiftyMove = False
+                tempRepetition = False
+                tempInsufficientMaterial = False
+                whiteTimeout = False
+                blackTimeout = False
+
         ui.tickClock()
         ui.flipDisplay()
 
