@@ -25,12 +25,12 @@ class Server():
         p.init()
         clock = p.time.Clock()
 
-        self.defaultBaseTime = 10
-        self.defaultIncrementTime = 10
+        self.defaultBaseTime = 0.5
+        self.defaultIncrementTime = 1
 
         self.gameState = GameState()
         self.colors = ["w", "b"]
-        self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
+        self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime)
         self.whiteClockOn = True
         self.num_ticks = 0
         self.whiteTimeout = False
