@@ -1,25 +1,32 @@
+import pygame as p
+import threading
+import time
+
 class Clock():
 
     def __init__(self, baseTime, incrementTime):
-        self.whiteBaseTime = baseTime * 60
-        self.whiteIncrement = incrementTime
-        self.blackBaseTime = baseTime * 60
-        self.blackIncrement = incrementTime
+        #measured in milliseconds
+        self.whiteBaseTime = baseTime * 60 * 1000
+        self.whiteIncrement = incrementTime * 1000
+        self.blackBaseTime = baseTime * 60 * 1000
+        self.blackIncrement = incrementTime * 1000
+
+        self.gsReference = None
 
         if baseTime < 3:
-            self.lowTimeThreshold = 10
+            self.lowTimeThreshold = 10 * 1000
         elif baseTime < 10:
-            self.lowTimeThreshold = 30
+            self.lowTimeThreshold = 30 * 1000
         elif baseTime < 30:
-            self.lowTimeThreshold = 60
+            self.lowTimeThreshold = 60 * 1000
         else:
-            self.lowTimeThreshold = 120
+            self.lowTimeThreshold = 120 * 1000
 
     def resetClock(self, whiteBaseTime, whiteIncrement, blackBaseTime, blackIncrement):
-        self.whiteBaseTime = whiteBaseTime * 60
-        self.whiteIncrement = whiteIncrement
-        self.blackBaseTime = blackBaseTime * 60
-        self.blackIncrement = blackIncrement
+        self.whiteBaseTime = whiteBaseTime * 60 * 1000
+        self.whiteIncrement = whiteIncrement * 1000
+        self.blackBaseTime = blackBaseTime * 60 * 1000
+        self.blackIncrement = blackIncrement * 1000
 
     def increment(self, color):
         if color == "w":
@@ -33,8 +40,23 @@ class Clock():
         elif color == "b":
             self.blackBaseTime = self.blackBaseTime - self.blackIncrement
 
-    def updateClock(self, color):
-        if color == "w":
-            self.whiteBaseTime = self.whiteBaseTime - 1
-        elif color == "b":
-            self.blackBaseTime = self.blackBaseTime - 1
+    def runClock(self, gs):
+        p.init()
+        self.gsReference = gs
+        tickClock = p.time.Clock()
+        FPS = 60
+        thread = threading.Thread(target=self.runClock2, args=(tickClock, FPS))
+        thread.daemon = True
+        thread.start()
+
+    def runClock2(self, tickClock, FPS):
+        multiplier = 0.82 #use if needed to account for lag
+        while not self.gsReference.gameOver:
+            if self.gsReference.whiteToMove:
+                self.whiteBaseTime = self.whiteBaseTime - int(1000 / (FPS * multiplier))
+            else:
+                self.blackBaseTime = self.blackBaseTime - int(1000 / (FPS * multiplier))
+            tickClock.tick(FPS)
+
+    def updateGSReference(self, gs):
+        self.gsReference = gs

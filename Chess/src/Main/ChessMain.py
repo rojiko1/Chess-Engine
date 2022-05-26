@@ -1,6 +1,8 @@
+import time
 import pygame as p
 from playsound import playsound
 import random
+import threading
 
 from Chess.src.Engine.Clock import Clock
 from Chess.src.Engine.GameState import GameState
@@ -10,8 +12,8 @@ from Chess.src.UserInterface.UserInterface import UserInterface
 from Chess.src.Server.Network import Network
 from Chess.src.AI.Computer import Computer
 
-#Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation
-#Current issue: start server from multiplayer, premove, game management when players disconnect, pawn move index out of range bug
+#Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation, premove, start server from multiplayer, mapping, Minimax
+#Current issue: game management when players disconnect, bug with index not found in Minimax with regard to no capture count
 
 def main():
     ss = SettingsState()
@@ -85,6 +87,7 @@ def run_single_machine_multiplayer(ss, ui, running):
     mode = "oneMultiplayer"
     gs = GameState()
     gameClock = Clock(ss.clockLength, ss.clockIncrement)
+    gameClock.runClock(gs)
     whiteClockOn = True
     num_ticks = 0
     gameComplete = False
@@ -104,6 +107,7 @@ def run_single_machine_multiplayer(ss, ui, running):
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
+                gs.gameOver = True
                 running = False
             elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
                 location = p.mouse.get_pos()
@@ -180,17 +184,12 @@ def run_single_machine_multiplayer(ss, ui, running):
             legalMoves = gs.getLegalMoves()
             moveMade = False
         if not gameComplete:
-            if len(gs.moveLog) > 0: #handling game clock
-                num_ticks = num_ticks + 1
-                if(num_ticks >= ui.FPS):
-                    gameClock.updateClock(gs.getTurnColor())
-                    num_ticks = 0
-                    if gameClock.whiteBaseTime == 0:
-                        whiteTimeout = True
-                    elif gameClock.blackBaseTime == 0:
-                        blackTimeout = True
-                    elif (gameClock.whiteBaseTime == (gameClock.lowTimeThreshold - 1)) | (gameClock.blackBaseTime == (gameClock.lowTimeThreshold - 1)):
-                        playsound("../../assets/sounds/low_time_sound.mp3")
+            if gameClock.whiteBaseTime <= 0:
+                whiteTimeout = True
+            elif gameClock.blackBaseTime <= 0:
+                blackTimeout = True
+            elif (gameClock.whiteBaseTime == (gameClock.lowTimeThreshold - 1)) | (gameClock.blackBaseTime == (gameClock.lowTimeThreshold - 1)):
+                playsound("../../assets/sounds/low_time_sound.mp3")
             ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode)
             if gs.checkmate:
                 gameComplete = True
@@ -220,6 +219,8 @@ def run_single_machine_multiplayer(ss, ui, running):
                 gameComplete = True
                 ui.drawEndOfGame("blackTimeout")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
+            if gameComplete:
+                gs.gameOver = True
         ui.tickClock()
         ui.flipDisplay()
 
@@ -256,9 +257,9 @@ def run_two_machine_multiplayer(ss, ui, running):
     while running:
         if not gameComplete:
             gameClock = n.send("Requesting Clock")
-            if gameClock.whiteBaseTime == 0:
+            if gameClock.whiteBaseTime <= 0:
                 whiteTimeout = True
-            elif gameClock.blackBaseTime == 0:
+            elif gameClock.blackBaseTime <= 0:
                 blackTimeout = True
             elif ((myColor == "w") & (gameClock.whiteBaseTime == gameClock.lowTimeThreshold)) & whiteLTNotSounded:
                 playsound("../../assets/sounds/low_time_sound.mp3")
@@ -276,6 +277,8 @@ def run_two_machine_multiplayer(ss, ui, running):
                 for e in p.event.get():
                     if e.type == p.QUIT:
                         running = False
+                        gs.gameOver = True
+                        n.send(gs)
                     elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
                         location = p.mouse.get_pos()
                         column = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard,
@@ -370,6 +373,7 @@ def run_two_machine_multiplayer(ss, ui, running):
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
 
         if gameComplete:
+            gs.gameOver = True
             resetGame = n.send(myColor + " Requesting Reset Game Status")
             for e in p.event.get():
                 if e.type == p.QUIT:
@@ -415,6 +419,7 @@ def run_single_player(ss, ui, running):
     gs = GameState()
     computer = Computer(compColor)
     gameClock = Clock(ss.clockLength, ss.clockIncrement)
+    gameClock.runClock(gs)
     whiteClockOn = True
     num_ticks = 0
     gameComplete = False
@@ -442,6 +447,7 @@ def run_single_player(ss, ui, running):
             for e in p.event.get():
                 if e.type == p.QUIT:
                     running = False
+                    gs.gameOver = True
                 elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
                     location = p.mouse.get_pos()
                     column = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
@@ -517,10 +523,11 @@ def run_single_player(ss, ui, running):
                 moveMade = False
                 generatedLegalMoves = False
                 sentComputerMoveRequest = False
+                print("Evaluation after", myColor, "is:", str(computer.evaluator.evaluatePosition(gs.board)))
         elif myColorIsWhite != gs.whiteToMove:
             if not sentComputerMoveRequest:
                 length = len(gs.moveLog)
-                computer.findOptimalMove(gs, gameClock, mode)
+                computer.findOptimalMove(gs, gameClock)
                 sentComputerMoveRequest = True
             for e in p.event.get():
                 if e.type == p.QUIT:
@@ -533,20 +540,15 @@ def run_single_player(ss, ui, running):
                 gs.makeMove(move)
                 ui.animateMove(gs, ss, mode)
                 gameClock.increment(compColor)
-                evaluation = computer.evaluator.evaluatePosition(gs.board)
+                print("Evaluation after", compColor, "is:", str(computer.evaluator.evaluatePosition(gs.board)))
         if not gameComplete:
-            if len(gs.moveLog) > 0: #handling game clock
-                num_ticks = num_ticks + 1
-                if(num_ticks >= ui.FPS):
-                    gameClock.updateClock(gs.getTurnColor())
-                    num_ticks = 0
-                    if gameClock.whiteBaseTime == 0:
-                        whiteTimeout = True
-                    elif gameClock.blackBaseTime == 0:
-                        blackTimeout = True
-                    elif ((myColorIsWhite & (gameClock.whiteBaseTime == gameClock.lowTimeThreshold)) | ((not myColorIsWhite) & (gameClock.blackBaseTime == gameClock.lowTimeThreshold))) & LTNotSounded:
-                        playsound("../../assets/sounds/low_time_sound.mp3")
-                        LTNotSounded = False
+            if gameClock.whiteBaseTime <= 0:
+                whiteTimeout = True
+            elif gameClock.blackBaseTime <= 0:
+                blackTimeout = True
+            elif ((myColorIsWhite & (gameClock.whiteBaseTime == gameClock.lowTimeThreshold)) | ((not myColorIsWhite) & (gameClock.blackBaseTime == gameClock.lowTimeThreshold))) & LTNotSounded:
+                playsound("../../assets/sounds/low_time_sound.mp3")
+                LTNotSounded = False
             ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode)
             if gs.checkmate:
                 gameComplete = True
@@ -576,6 +578,8 @@ def run_single_player(ss, ui, running):
                 gameComplete = True
                 ui.drawEndOfGame("blackTimeout")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
+            if gameComplete:
+                gs.gameOver = True
         ui.tickClock()
         ui.flipDisplay()
 

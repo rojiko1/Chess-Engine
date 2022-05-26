@@ -34,6 +34,7 @@ class GameState():
         self.fiftyMoveRuleDraw = False
         self.drawByRepetition = False
         self.insufficientMaterial = self.checkInsufficentMaterial()
+        self.gameOver = False
         #initialize right to castle
         self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
         self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
@@ -226,9 +227,9 @@ class GameState():
         elif move.pieceMoved == "bK":
             self.bKingLocation = (move.startR, move.startC)
         self.moveLog.pop(-1)
-        if move.pieceCaptured == "--":
+        if (move.pieceCaptured == "--") & (len(self.moveLog) > 0):
             self.noCaptureCount = self.noCaptureCount - 1
-        else:
+        elif len(self.moveLog) > 0:
             self.noCaptureCount = self.findNoCaptureCount()
         self.checkmate = False
         self.stalemate = False
@@ -381,10 +382,10 @@ class GameState():
                if r == 6:
                     if self.board[r-2][c] == "--": #move up two squares
                         moves.append(Move((r, c), (r-2, c), self.board))
-            if (c-1 >= 0):
+            if ((c-1) >= 0):
                 if (self.board[r-1][c-1][0] == "b"): #diagonal left capture
                     moves.append(Move((r, c), (r-1, c-1), self.board))
-            if (c+1 <= 7):
+            if ((c+1) <= 7):
                 if (self.board[r-1][c+1][0] == "b"): #diagonal right capture
                     moves.append(Move((r, c), (r-1, c+1), self.board))
             if (r == 3) & (len(self.moveLog) > 0):
@@ -392,7 +393,7 @@ class GameState():
                     if self.isOnBoard(r, c-1):
                         if (self.board[r][c-1] == "bp") & (self.moveLog[-1].startC == c-1) & (self.moveLog[-1].endC == c-1):
                             moves.append(Move((r, c), (r-1, c-1), self.board, enPassant = True)) #en passant left
-                    if self.isOnBoard(r, c-1):
+                    if self.isOnBoard(r, c+1):
                         if (self.board[r][c+1] == "bp") & (self.moveLog[-1].startC == c+1) & (self.moveLog[-1].endC == c+1):
                             moves.append(Move((r, c), (r-1, c+1), self.board, enPassant = True)) #en passant right
         elif color == "b":
@@ -401,10 +402,10 @@ class GameState():
                 if r == 1:
                     if self.board[r+2][c] == "--": #move up two squares
                         moves.append(Move((r, c), (r+2, c), self.board))
-            if (c-1 >= 0):
+            if ((c-1) >= 0):
                 if (self.board[r+1][c-1][0] == "w"): #diagonal left capture
                     moves.append(Move((r, c), (r+1, c-1), self.board))
-            if (c+1 <= 7):
+            if ((c+1) <= 7):
                 if (self.board[r+1][c+1][0] == "w"): #diagonal right capture
                     moves.append(Move((r, c), (r+1, c+1), self.board))
             if (r == 4):

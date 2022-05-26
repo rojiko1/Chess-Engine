@@ -41,7 +41,6 @@ class UserInterface():
         self.backButton = False
         self.settingsButtonWidth = self.WINDOW_WIDTH * (170 / 1280)
         self.settingsButtonHeight = self.WINDOW_HEIGHT * (60 / 800)
-        #0.32, 0.57, 0.82
         self.backLoc = (self.WINDOW_WIDTH - self.settingsButtonWidth, self.WINDOW_HEIGHT - self.settingsButtonHeight)
         self.boardColorSchemeLoc = (0.2 * self.WINDOW_WIDTH, 0.28 * self.WINDOW_HEIGHT)
         self.moveHighlightingLoc = (0.2 * self.WINDOW_WIDTH, 0.47 * self.WINDOW_HEIGHT)
@@ -287,7 +286,12 @@ class UserInterface():
                 return num
 
     def renderMoveHistory(self, gs):
-        TEXT_FONT = p.font.SysFont('arial', int(self.WINDOW_WIDTH * (28 / 1280)), False, False)
+        if len(gs.moveLog) > 80:
+            FONT_SIZE = int(self.WINDOW_WIDTH * (24 / 1280))
+        else:
+            FONT_SIZE = int(self.WINDOW_WIDTH * (28 / 1280))
+        FONT_SIZE = int(self.WINDOW_WIDTH * (28 / 1280))
+        TEXT_FONT = p.font.SysFont('arial', FONT_SIZE, False, False)
         TEXTBOX_X = self.WIDTH
         TEXTBOX_Y = 0
         TEXTBOX_WIDTH = int(self.WINDOW_WIDTH - self.WIDTH)
@@ -352,17 +356,17 @@ class UserInterface():
 
         #white clock
         p.draw.rect(self.screen, whiteColor, p.Rect(WHITE_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
-        white_hours = int(gameClock.whiteBaseTime / 3600)
-        white_minutes = int((gameClock.whiteBaseTime - (white_hours * 3600)) / 60)
-        white_seconds = int(gameClock.whiteBaseTime % 60)
+        white_hours = int(gameClock.whiteBaseTime / (3600 * 1000))
+        white_minutes = int((gameClock.whiteBaseTime - (white_hours * 3600 * 1000)) / (60 * 1000))
+        white_seconds = int((gameClock.whiteBaseTime - (white_minutes * 60 * 1000)) / (1000))
         whiteTimeText = TEXT_FONT.render(str(white_hours) + ":" + str(white_minutes).zfill(2) + ":" + str(white_seconds).zfill(2), 0, TEXT_COLOR)
         self.screen.blit(whiteTimeText, (WHITE_CLOCK_X + ((CLOCK_WIDTH - whiteTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - whiteTimeText.get_height()) / 2)))
 
         #black clock
         p.draw.rect(self.screen, blackColor, p.Rect(BLACK_CLOCK_X, CLOCK_Y, CLOCK_WIDTH, CLOCK_HEIGHT))
-        black_hours = int(gameClock.blackBaseTime / 3600)
-        black_minutes = int((gameClock.blackBaseTime - (black_hours * 3600)) / 60)
-        black_seconds = int(gameClock.blackBaseTime % 60)
+        black_hours = int(gameClock.blackBaseTime / (3600 * 1000))
+        black_minutes = int((gameClock.blackBaseTime - (black_hours * 3600 * 1000)) / (60 * 1000))
+        black_seconds = int((gameClock.blackBaseTime - (black_minutes * 60 * 1000)) / (1000))
         blackTimeText = TEXT_FONT.render(str(black_hours) + ":" + str(black_minutes).zfill(2) + ":" + str(black_seconds).zfill(2), 0, TEXT_COLOR)
         self.screen.blit(blackTimeText, (BLACK_CLOCK_X + ((CLOCK_WIDTH - blackTimeText.get_width()) / 2), CLOCK_Y + ((CLOCK_HEIGHT - blackTimeText.get_height()) / 2)))
 

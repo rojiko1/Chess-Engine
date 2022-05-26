@@ -46,22 +46,18 @@ class Server():
         blackTaken = False
         while True:
             clock.tick(30)
-            if len(self.gameState.moveLog) > 0:
-                self.num_ticks = self.num_ticks + 1
-                if(self.num_ticks == 30):
-                    self.gameClock.updateClock(self.gameState.getTurnColor())
-                    self.num_ticks = 0
-                    if self.gameClock.whiteBaseTime == 0:
-                        self.whiteTimeout = True
-                        self.gameComplete = True
-                    elif self.gameClock.blackBaseTime == 0:
-                        self.blackTimeout = True
-                        self.gameComplete = True
+            if self.gameClock.whiteBaseTime == 0:
+                self.whiteTimeout = True
+                self.gameComplete = True
+            elif self.gameClock.blackBaseTime == 0:
+                self.blackTimeout = True
+                self.gameComplete = True
             if self.wRequestReset & self.bRequestReset:
                 self.resetGame = True
                 self.gameState = GameState()
                 self.colors = ["w", "b"]
                 self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
+                self.gameClock.runClock(self.gameState)
                 self.whiteClockOn = True
                 self.num_ticks = 0
                 self.whiteTimeout = False
@@ -82,9 +78,11 @@ class Server():
                 elif whiteTaken:
                     blackTaken = True
                     start_new_thread(self.threaded_client, (conn, 1))
+                    self.gameClock.runClock(self.gameState)
                 elif blackTaken:
                     whiteTaken = True
                     start_new_thread(self.threaded_client, (conn, 0))
+                    self.gameClock.runClock(self.gameState)
 
     def threaded_client(self, conn, currentPlayer):
         conn.send(pickle.dumps(self.gameState))
@@ -94,6 +92,7 @@ class Server():
                 data = pickle.loads(conn.recv(16384))
                 if isinstance(data, GameState):
                     self.gameState = data
+                    self.gameClock.updateGSReference(self.gameState)
                     reply = "Received data"
                 elif data == "Requesting GameState":
                     reply = self.gameState
