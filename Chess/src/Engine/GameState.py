@@ -153,11 +153,12 @@ class GameState():
         self.moveLog.append(move)
         if self.noCaptureCount >= 50:
             pawnMoveCount = 0
-            for index in range(1, 51):
-                if self.moveLog[-1 * index].pieceMoved[1] == "p":
-                    pawnMoveCount = pawnMoveCount + 1
-            if pawnMoveCount == 0:
-                self.fiftyMoveRuleDraw = True
+            if len(self.moveLog) > 0:
+                for index in range(1, 51):
+                    if self.moveLog[-1 * index].pieceMoved[1] == "p":
+                        pawnMoveCount = pawnMoveCount + 1
+                if pawnMoveCount == 0:
+                    self.fiftyMoveRuleDraw = True
         #record board for draw by repetition
         self.recordBoard()
         if self.checkDrawByRepetition():

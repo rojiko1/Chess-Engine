@@ -2,6 +2,7 @@ import pygame as p
 from playsound import playsound
 
 from Chess.src.OtherStates.SpriteSheet import SpriteSheet
+from Chess.src.Engine.Move import Move
 
 class UserInterface():
 
@@ -198,11 +199,12 @@ class UserInterface():
 
         self.screen.blit(text, (rectPos[0] + ((rectSize[0] - text.get_width()) / 2), rectPos[1] + ((rectSize[1] - text.get_height()) / 2)))
 
-    def drawGameState(self, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode):
+    def drawGameState(self, gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode, premoveSqSelected = None, premove = None):
         self.screen.fill(p.Color("white"))
         self.drawBoard(gs, ss, mode)
-        if ss.highlightValidMoves:
-            self.drawSelected(gs, ss, sqSelected, legalMoves, mode)
+        self.drawSelected(gs, ss, sqSelected, legalMoves, mode, ss.highlightValidMoves)
+        if (type(premoveSqSelected) == tuple):
+            self.drawPremove(gs, ss, premoveSqSelected, premove, mode)
         self.drawPieces(gs, ss, mode)
         self.renderMoveHistory(gs)
         self.displayClock(gameClock, whiteClockOn)
@@ -228,16 +230,28 @@ class UserInterface():
                 if piece != "--":
                     self.screen.blit(self.IMAGES[(2 * self.PIECES.index(piece)) + constant], p.Rect(self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
-    def drawSelected(self, gs, ss, sqSelected, legalMoves, mode):
+    def drawSelected(self, gs, ss, sqSelected, legalMoves, mode, highlightValidMoves):
         if (len(sqSelected) > 0):
             if gs.board[int(sqSelected[0])][int(sqSelected[1])][0] == gs.getTurnColor():
                 p.draw.rect(self.screen, p.Color("palegreen4"), p.Rect(self.adjustForFlipBoard(int(sqSelected[1]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(int(sqSelected[0]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
-                for move in legalMoves:
-                    if (move.startR == int(sqSelected[0])) & (move.startC == int(sqSelected[1])):
-                        if move.pieceCaptured == "--":
-                            self.screen.blit(self.IMAGES[-2], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
-                        elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
-                            self.screen.blit(self.IMAGES[-1], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                if highlightValidMoves:
+                    for move in legalMoves:
+                        if (move.startR == int(sqSelected[0])) & (move.startC == int(sqSelected[1])):
+                            if move.pieceCaptured == "--":
+                                self.screen.blit(self.IMAGES[-2], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                            elif (gs.whiteToMove & (move.pieceCaptured[0] == "b")) | ((not gs.whiteToMove) & (move.pieceCaptured[0] == "w")):
+                                self.screen.blit(self.IMAGES[-1], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+
+    def drawPremove(self, gs, ss, premoveSqSelected, premove, mode):
+        SELECT_COLOR = p.Color("cadetblue3")
+        PREMOVE_COLOR = p.Color("cadetblue4")
+        if isinstance(premove, Move):
+            p.draw.rect(self.screen, PREMOVE_COLOR, p.Rect(self.adjustForFlipBoard(premove.startC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(premove.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+            p.draw.rect(self.screen, PREMOVE_COLOR, p.Rect(self.adjustForFlipBoard(premove.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(premove.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+        elif (len(premoveSqSelected) > 0):
+            if gs.board[int(premoveSqSelected[0])][int(premoveSqSelected[1])][0] == gs.getOppColor(gs.getTurnColor()):
+                p.draw.rect(self.screen, SELECT_COLOR, p.Rect(self.adjustForFlipBoard(int(premoveSqSelected[1]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(int(premoveSqSelected[0]), gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+
 
     def animateMove(self, gs, ss, mode):
         move = gs.moveLog[-1]

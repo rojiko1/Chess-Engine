@@ -25,12 +25,13 @@ class Server():
         p.init()
         clock = p.time.Clock()
 
-        self.defaultBaseTime = 0.5
-        self.defaultIncrementTime = 1
+        self.defaultBaseTime = 5
+        self.defaultIncrementTime = 0
 
         self.gameState = GameState()
         self.colors = ["w", "b"]
-        self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime)
+        self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, "2MMultiplayer")
+        self.gameClock.runClock(self.gameState)
         self.whiteClockOn = True
         self.num_ticks = 0
         self.whiteTimeout = False

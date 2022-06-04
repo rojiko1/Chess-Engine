@@ -4,7 +4,7 @@ import time
 
 class Clock():
 
-    def __init__(self, baseTime, incrementTime):
+    def __init__(self, baseTime, incrementTime, gameType):
         #measured in milliseconds
         self.whiteBaseTime = baseTime * 60 * 1000
         self.whiteIncrement = incrementTime * 1000
@@ -12,6 +12,7 @@ class Clock():
         self.blackIncrement = incrementTime * 1000
 
         self.gsReference = None
+        self.gameType = gameType
 
         if baseTime < 3:
             self.lowTimeThreshold = 10 * 1000
@@ -50,12 +51,16 @@ class Clock():
         thread.start()
 
     def runClock2(self, tickClock, FPS):
-        multiplier = 0.82 #use if needed to account for lag
+        if self.gameType != "2MMultiplayer":
+            multiplier = 0.82 #use if needed to account for lag
+        else:
+            multiplier = 2.0
         while not self.gsReference.gameOver:
-            if self.gsReference.whiteToMove:
-                self.whiteBaseTime = self.whiteBaseTime - int(1000 / (FPS * multiplier))
-            else:
-                self.blackBaseTime = self.blackBaseTime - int(1000 / (FPS * multiplier))
+            if len(self.gsReference.moveLog) > 0:
+                if self.gsReference.whiteToMove:
+                    self.whiteBaseTime = self.whiteBaseTime - int(1000 / (FPS * multiplier))
+                else:
+                    self.blackBaseTime = self.blackBaseTime - int(1000 / (FPS * multiplier))
             tickClock.tick(FPS)
 
     def updateGSReference(self, gs):

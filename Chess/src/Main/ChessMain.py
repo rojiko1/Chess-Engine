@@ -12,8 +12,8 @@ from Chess.src.UserInterface.UserInterface import UserInterface
 from Chess.src.Server.Network import Network
 from Chess.src.AI.Computer import Computer
 
-#Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation, premove, start server from multiplayer, mapping, Minimax
-#Current issue: game management when players disconnect, bug with index not found in Minimax with regard to no capture count
+#Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation
+#Current issue: game management when players disconnect
 
 def main():
     ss = SettingsState()
@@ -86,10 +86,9 @@ def run_single_machine_multiplayer(ss, ui, running):
     #game screen
     mode = "oneMultiplayer"
     gs = GameState()
-    gameClock = Clock(ss.clockLength, ss.clockIncrement)
+    gameClock = Clock(ss.clockLength, ss.clockIncrement, "1MMultiplayer")
     gameClock.runClock(gs)
     whiteClockOn = True
-    num_ticks = 0
     gameComplete = False
     sqSelected = ()
     playerClicks = []
@@ -99,8 +98,6 @@ def run_single_machine_multiplayer(ss, ui, running):
     tempInsufficientMaterial = False
     whiteTimeout = False
     blackTimeout = False
-    whiteLTNotSounded = True
-    blackLTNotSounded = True
     ui.flipDisplay()
     legalMoves = gs.getLegalMoves()
     #game loop
@@ -163,7 +160,6 @@ def run_single_machine_multiplayer(ss, ui, running):
                     gs.resetGameState()
                     gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
                     whiteClockOn = True
-                    num_ticks = 0
                     gameComplete = False
                     sqSelected = ()
                     playerClicks = []
@@ -173,13 +169,10 @@ def run_single_machine_multiplayer(ss, ui, running):
                     tempInsufficientMaterial = False
                     whiteTimeout = False
                     blackTimeout = False
-                    whiteLTNotSounded = True
-                    blackLTNotSounded = True
                     legalMoves = gs.getLegalMoves()
         if moveMade:
             gameClock.increment(gs.getOppColor(gs.getTurnColor()))
             whiteClockOn = not whiteClockOn
-            num_ticks = 0
             ui.animateMove(gs, ss, mode)
             legalMoves = gs.getLegalMoves()
             moveMade = False
@@ -242,6 +235,9 @@ def run_two_machine_multiplayer(ss, ui, running):
     gameComplete = False
     sqSelected = ()
     playerClicks = []
+    premoveSqSelected = ()
+    premovePlayerClicks = []
+    premove = None
     moveMade = False
     generatedLegalMoves = False
     tempFiftyMove = False
@@ -261,10 +257,10 @@ def run_two_machine_multiplayer(ss, ui, running):
                 whiteTimeout = True
             elif gameClock.blackBaseTime <= 0:
                 blackTimeout = True
-            elif ((myColor == "w") & (gameClock.whiteBaseTime == gameClock.lowTimeThreshold)) & whiteLTNotSounded:
+            elif ((myColor == "w") & (gameClock.whiteBaseTime <= gameClock.lowTimeThreshold)) & whiteLTNotSounded:
                 playsound("../../assets/sounds/low_time_sound.mp3")
                 whiteLTNotSounded = False
-            elif ((myColor == "b") & (gameClock.blackBaseTime == gameClock.lowTimeThreshold)) & blackLTNotSounded:
+            elif ((myColor == "b") & (gameClock.blackBaseTime <= gameClock.lowTimeThreshold)) & blackLTNotSounded:
                 playsound("../../assets/sounds/low_time_sound.mp3")
                 blackLTNotSounded = False
             if myColor == gs.getTurnColor():
@@ -274,6 +270,38 @@ def run_two_machine_multiplayer(ss, ui, running):
                         whiteClockOn = not whiteClockOn
                     legalMoves = gs.getLegalMoves()
                     generatedLegalMoves = True
+                premoveSqSelected = ()
+                premovePlayerClicks = []
+                if isinstance(premove, Move):
+                    for legalMove in legalMoves:
+                        if premove == legalMove:
+                            if (legalMove.pawnPromotion) & (not ss.autoQueen):
+                                choiceMade = False
+                                print("q for queen")
+                                print("n or k for knight")
+                                print("r for rook")
+                                print("b for bishop")
+                                while not choiceMade:
+                                    choice = p.event.wait()
+                                    if (choice.type == p.KEYDOWN):
+                                        if choice.key == p.K_q:
+                                            legalMove.promotionChoice = "Q"
+                                            choiceMade = True
+                                        elif (choice.key == p.K_n) | (choice.key == p.K_k):
+                                            legalMove.promotionChoice = "N"
+                                            choiceMade = True
+                                        elif choice.key == p.K_r:
+                                            legalMove.promotionChoice = "R"
+                                            choiceMade = True
+                                        elif choice.key == p.K_b:
+                                            legalMove.promotionChoice = "B"
+                                            choiceMade = True
+                            gs.makeMove(legalMove)
+                            tempFiftyMove = gs.fiftyMoveRuleDraw
+                            tempRepetition = gs.drawByRepetition
+                            tempInsufficientMaterial = gs.insufficientMaterial
+                            moveMade = True
+                    premove = None
                 for e in p.event.get():
                     if e.type == p.QUIT:
                         running = False
@@ -337,10 +365,22 @@ def run_two_machine_multiplayer(ss, ui, running):
                     if e.type == p.QUIT:
                         running = False
                     elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
-                        print("Not your turn")
+                        location = p.mouse.get_pos()
+                        premoveColumn = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard,
+                                                       mode)
+                        premoveRow = ui.adjustForFlipBoard(int(location[1] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
+                        if premoveSqSelected == (premoveRow, premoveColumn):
+                            premoveSqSelected = ()
+                            premovePlayerClicks = []
+                        else:
+                            premoveSqSelected = (premoveRow, premoveColumn)
+                            premovePlayerClicks.append(premoveSqSelected)
+                            premove = None
+                            if len(premovePlayerClicks) == 2:
+                                premove = Move(premovePlayerClicks[0], premovePlayerClicks[1], gs.board)
                 gs = n.send("Requesting GameState")
 
-            ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode)
+            ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode, premoveSqSelected = premoveSqSelected, premove = premove)
             if gs.checkmate | gs.stalemate:
                 ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, not gs.whiteToMove, mode)
             if gs.checkmate:
@@ -418,13 +458,15 @@ def run_single_player(ss, ui, running):
 
     gs = GameState()
     computer = Computer(compColor)
-    gameClock = Clock(ss.clockLength, ss.clockIncrement)
+    gameClock = Clock(ss.clockLength, ss.clockIncrement, "SinglePlayer")
     gameClock.runClock(gs)
     whiteClockOn = True
-    num_ticks = 0
     gameComplete = False
     sqSelected = ()
     playerClicks = []
+    premoveSqSelected = ()
+    premovePlayerClicks = []
+    premove = None
     moveMade = False
     generatedLegalMoves = False
     tempFiftyMove = False
@@ -444,6 +486,38 @@ def run_single_player(ss, ui, running):
                     whiteClockOn = not whiteClockOn
                 legalMoves = gs.getLegalMoves()
                 generatedLegalMoves = True
+            premoveSqSelected = ()
+            premovePlayerClicks = []
+            if isinstance(premove, Move):
+                for legalMove in legalMoves:
+                    if premove == legalMove:
+                        if (legalMove.pawnPromotion) & (not ss.autoQueen):
+                            choiceMade = False
+                            print("q for queen")
+                            print("n or k for knight")
+                            print("r for rook")
+                            print("b for bishop")
+                            while not choiceMade:
+                                choice = p.event.wait()
+                                if (choice.type == p.KEYDOWN):
+                                    if choice.key == p.K_q:
+                                        legalMove.promotionChoice = "Q"
+                                        choiceMade = True
+                                    elif (choice.key == p.K_n) | (choice.key == p.K_k):
+                                        legalMove.promotionChoice = "N"
+                                        choiceMade = True
+                                    elif choice.key == p.K_r:
+                                        legalMove.promotionChoice = "R"
+                                        choiceMade = True
+                                    elif choice.key == p.K_b:
+                                        legalMove.promotionChoice = "B"
+                                        choiceMade = True
+                        gs.makeMove(legalMove)
+                        tempFiftyMove = gs.fiftyMoveRuleDraw
+                        tempRepetition = gs.drawByRepetition
+                        tempInsufficientMaterial = gs.insufficientMaterial
+                        moveMade = True
+                premove = None
             for e in p.event.get():
                 if e.type == p.QUIT:
                     running = False
@@ -502,10 +576,12 @@ def run_single_player(ss, ui, running):
                         gs.resetGameState()
                         gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
                         whiteClockOn = True
-                        num_ticks = 0
                         gameComplete = False
                         sqSelected = ()
                         playerClicks = []
+                        premoveSqSelected = ()
+                        premovePlayerClicks = []
+                        premove = None
                         moveMade = False
                         tempFiftyMove = False
                         tempRepetition = False
@@ -517,7 +593,6 @@ def run_single_player(ss, ui, running):
             if moveMade:
                 gameClock.increment(gs.getOppColor(gs.getTurnColor()))
                 whiteClockOn = not whiteClockOn
-                num_ticks = 0
                 ui.animateMove(gs, ss, mode)
                 legalMoves = gs.getLegalMoves()
                 moveMade = False
@@ -533,7 +608,21 @@ def run_single_player(ss, ui, running):
                 if e.type == p.QUIT:
                     running = False
                 elif (e.type == p.MOUSEBUTTONDOWN) & (p.mouse.get_pos()[0] < ui.WIDTH) & (p.mouse.get_pos()[1] < ui.HEIGHT) & (not gameComplete):
-                    print("Not your turn")
+                    location = p.mouse.get_pos()
+                    premoveColumn = ui.adjustForFlipBoard(int(location[0] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard,
+                                                   mode)
+                    premoveRow = ui.adjustForFlipBoard(int(location[1] / ui.SQ_SIZE), gs.whiteToMove, ss.flipBoard, mode)
+                    if premoveSqSelected == (premoveRow, premoveColumn):
+                        premoveSqSelected = ()
+                        premovePlayerClicks = []
+                    else:
+                        premoveSqSelected = (premoveRow, premoveColumn)
+                        premovePlayerClicks.append(premoveSqSelected)
+                        premove = None
+                        if len(premovePlayerClicks) == 2:
+                            premove = Move(premovePlayerClicks[0], premovePlayerClicks[1], gs.board)
+                            premoveSqSelected = ()
+                            premovePlayerClicks = []
             if len(gs.moveLog) == (length + 1):
                 move = gs.moveLog[-1]
                 gs.moveLog.pop(-1)
@@ -546,10 +635,10 @@ def run_single_player(ss, ui, running):
                 whiteTimeout = True
             elif gameClock.blackBaseTime <= 0:
                 blackTimeout = True
-            elif ((myColorIsWhite & (gameClock.whiteBaseTime == gameClock.lowTimeThreshold)) | ((not myColorIsWhite) & (gameClock.blackBaseTime == gameClock.lowTimeThreshold))) & LTNotSounded:
+            elif ((myColorIsWhite & (gameClock.whiteBaseTime <= gameClock.lowTimeThreshold)) | ((not myColorIsWhite) & (gameClock.blackBaseTime <= gameClock.lowTimeThreshold))) & LTNotSounded:
                 playsound("../../assets/sounds/low_time_sound.mp3")
                 LTNotSounded = False
-            ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode)
+            ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, whiteClockOn, mode, premoveSqSelected = premoveSqSelected, premove = premove)
             if gs.checkmate:
                 gameComplete = True
                 ui.drawEndOfGame("checkmate", color = gs.getOppColor(gs.getTurnColor()))

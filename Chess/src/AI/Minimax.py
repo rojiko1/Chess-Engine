@@ -32,16 +32,21 @@ class Minimax():
                 CONSTANT2 = -1
             highestEval = -999.0
             indexOfHighestEval = -1
-            for move in legalMoves:
-                gs2.makeMove(move)
-                evaluation = CONSTANT * CONSTANT2 * evaluator.evaluatePosition(gs2.board)
-                gs2.undoMove()
-                self.numberOfMovesSearched += 1
-                if evaluation > highestEval:
-                    highestEval = evaluation
-                    indexOfHighestEval = legalMoves.index(move)
-                    if (-1 * highestEval) < networkWideHigh:
-                        return -999.0, -1
+            if len(legalMoves) > 0:
+                for move in legalMoves:
+                    gs2.makeMove(move)
+                    evaluation = CONSTANT * CONSTANT2 * evaluator.evaluatePosition(gs2.board)
+                    gs2.undoMove()
+                    self.numberOfMovesSearched += 1
+                    if evaluation > highestEval:
+                        highestEval = evaluation
+                        indexOfHighestEval = legalMoves.index(move)
+                        if (-1 * highestEval) < networkWideHigh:
+                            return -999.0, -1
+            elif gs2.inCheck(gs2.getTurnColor()):
+                return -999.9, -1
+            else:
+                return 0.0, -1
             return (-1 * highestEval), indexOfHighestEval
         else:
             highestEval = -999.0
