@@ -1,3 +1,5 @@
+import copy
+
 class Minimax():
 
     def __init__(self):
@@ -10,11 +12,11 @@ class Minimax():
             CONSTANT = -1
         legalMoves = gs2.getLegalMoves()
         if len(legalMoves) > 0:
-            if len(legalMoves) == 1:
+            if len(legalMoves) == 1: #if only one possible move, make move
                 gs.moveLog.append(legalMoves[0])
             else:
-                evaluation, index = self.recursiveMinimax(gs2, depth, 1, legalMoves, evaluator, CONSTANT, -999.9)
-                print("Index:", index)
+                copyLegalMoves = copy.deepcopy(legalMoves)
+                evaluation, index = self.recursiveMinimax(gs2, depth, 1, copyLegalMoves, evaluator, CONSTANT, -999.9)
 
                 #make move
                 gs.moveLog.append(legalMoves[index])
@@ -23,8 +25,13 @@ class Minimax():
         self.numberOfMovesSearched = 0
 
     def recursiveMinimax(self, gs2, depth, currentDepth, legalMoves, evaluator, CONSTANT, networkWideHigh):
-        '''if len(gs2.moveLog) > 0:
-            legalMoves = self.reorderLegalMoves(legalMoves, gs2.moveLog[-1])'''
+        #move all the way down to the depth specified
+        #for each possible outcome, evaluate board
+        #best evaluation for the color whose move it is gets passed up that branch
+        #repeat process until reaching the root node
+        #return the evaluation and index of the best move
+        if len(gs2.moveLog) > 0:
+            legalMoves = self.reorderLegalMoves(legalMoves, gs2.moveLog[-1]) #reorder moves so that more can be pruned (reduce time complexity)
         if depth == currentDepth:
             if currentDepth % 2 == 1:
                 CONSTANT2 = 1

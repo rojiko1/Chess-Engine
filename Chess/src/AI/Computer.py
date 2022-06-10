@@ -49,5 +49,3 @@ class Computer():
 
         endGameValue = math.pow(1089 - math.pow(numPieces, 2), 1/2) / 8
         return endGameValue
-
-

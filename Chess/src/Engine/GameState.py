@@ -87,6 +87,7 @@ class GameState():
         self.fiftyMoveRuleDraw = False
         self.drawByRepetition = False
         self.insufficientMaterial = self.checkInsufficentMaterial()
+        self.gameOver = False
         #initialize right to castle
         self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
         self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
@@ -107,6 +108,7 @@ class GameState():
         self.noCaptureCount = 0
         self.whiteBoards = [[copy.deepcopy(self.board), 1]]
         self.blackBoards = []
+        self.legalMoves = []
 
     def getTurnColor(self):
         if self.whiteToMove:
@@ -153,7 +155,7 @@ class GameState():
         self.moveLog.append(move)
         if self.noCaptureCount >= 50:
             pawnMoveCount = 0
-            if len(self.moveLog) > 0:
+            if len(self.moveLog) > 50:
                 for index in range(1, 51):
                     if self.moveLog[-1 * index].pieceMoved[1] == "p":
                         pawnMoveCount = pawnMoveCount + 1
@@ -172,33 +174,6 @@ class GameState():
             self.wKingLocation = (move.endR, move.endC)
         elif move.pieceMoved == "bK":
             self.bKingLocation = (move.endR, move.endC)
-
-    def updateCastling(self):
-        lastMove = self.moveLog[-1]
-        color = lastMove.pieceMoved[0]
-        pieceType = lastMove.pieceMoved[1]
-        if (pieceType == "K") | (lastMove.castling):
-            self.updateKingSideCastling(color)
-            self.updateQueenSideCastling(color)
-        if pieceType == "R":
-            if color == "w":
-                row = 7
-            if color == "b":
-                row = 0
-            if (lastMove.startR == row) & (lastMove.startC == 0):
-                self.updateQueenSideCastling(color)
-            if (lastMove.startR == row) & (lastMove.startC == 7):
-                self.updateKingSideCastling(color)
-
-    def updateKingSideCastling(self, color):
-        if self.castlingRightLost[color + "ks"] < 0:
-            self.hasCastlingRight[color + "ks"] = False
-            self.castlingRightLost[color + "ks"] = len(self.moveLog)
-
-    def updateQueenSideCastling(self, color):
-        if self.castlingRightLost[color + "qs"] < 0:
-            self.hasCastlingRight[color + "qs"] = False
-            self.castlingRightLost[color + "qs"] = len(self.moveLog)
 
     def undoMove(self):
         move = self.moveLog[-1]
@@ -237,6 +212,33 @@ class GameState():
         self.fiftyMoveRuleDraw = False
         self.drawByRepetition = False
         self.insufficientMaterial = False
+
+    def updateCastling(self):
+        lastMove = self.moveLog[-1]
+        color = lastMove.pieceMoved[0]
+        pieceType = lastMove.pieceMoved[1]
+        if (pieceType == "K") | (lastMove.castling):
+            self.updateKingSideCastling(color)
+            self.updateQueenSideCastling(color)
+        if pieceType == "R":
+            if color == "w":
+                row = 7
+            if color == "b":
+                row = 0
+            if (lastMove.startR == row) & (lastMove.startC == 0):
+                self.updateQueenSideCastling(color)
+            if (lastMove.startR == row) & (lastMove.startC == 7):
+                self.updateKingSideCastling(color)
+
+    def updateKingSideCastling(self, color):
+        if self.castlingRightLost[color + "ks"] < 0:
+            self.hasCastlingRight[color + "ks"] = False
+            self.castlingRightLost[color + "ks"] = len(self.moveLog)
+
+    def updateQueenSideCastling(self, color):
+        if self.castlingRightLost[color + "qs"] < 0:
+            self.hasCastlingRight[color + "qs"] = False
+            self.castlingRightLost[color + "qs"] = len(self.moveLog)
 
     def getLegalMoves(self): #considers checks from movement by taking all possibleMoves and identifying and removing moves that result in check
         turn = self.getTurnColor()

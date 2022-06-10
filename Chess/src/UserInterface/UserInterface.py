@@ -105,8 +105,6 @@ class UserInterface():
         self.IMAGES.append(p.transform.scale(p.image.load("../../assets/images/dot.png"), (self.SQ_SIZE, self.SQ_SIZE)))
         self.IMAGES.append(p.transform.scale(p.image.load("../../assets/images/target.png"), (self.SQ_SIZE, self.SQ_SIZE)))
 
-
-
     def printGameInstructions(self):
         print(" ")
         print("Hello and welcome to Rohil's chess engine!")
@@ -254,38 +252,39 @@ class UserInterface():
 
 
     def animateMove(self, gs, ss, mode):
-        move = gs.moveLog[-1]
-        if move.pieceCaptured == "--":
-            playsound("../../assets/sounds/move_sound.mp3")
-        else:
-            playsound("../../assets/sounds/capture_sound.mp3")
-        frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
-        if frameCount > 0:
-            animationFPS = 60
-            delta_r = move.endR - move.startR
-            delta_c = move.endC - move.startC
-            if ss.pieceStyle == "standard":
-                constant = 0
-            elif ss.pieceStyle == "leipzig":
-                constant = 1
-            for frame in range(frameCount + 1):
-                r, c = (move.startR + ((frame / frameCount) * delta_r), move.startC + ((frame / frameCount) * delta_c))
-                #draw board and pieces
-                self.drawBoard(gs, ss, mode)
-                self.drawPieces(gs, ss, mode)
-                #erase start and end squares
-                startSquare = p.Rect(self.adjustForFlipBoard(move.startC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) + self.adjustForFlipBoard(move.startC, gs.whiteToMove, ss.flipBoard, mode)) % 2], startSquare)
-                endSquare = p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
-                p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) + self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode)) % 2], endSquare)
-                #if piece will be captured, redraw captured piece
-                if move.pieceCaptured != "--":
-                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
-                #draw moved piece at animated coordinates
-                self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+        if len(gs.moveLog) > 0:
+            move = gs.moveLog[-1]
+            if move.pieceCaptured == "--":
+                playsound("../../assets/sounds/move_sound.mp3")
+            else:
+                playsound("../../assets/sounds/capture_sound.mp3")
+            frameCount = int(((ss.clockLength * 5) + (ss.clockIncrement * 10)) / 30) #num of frames over which animation occurs
+            if frameCount > 0:
+                animationFPS = 60
+                delta_r = move.endR - move.startR
+                delta_c = move.endC - move.startC
+                if ss.pieceStyle == "standard":
+                    constant = 0
+                elif ss.pieceStyle == "leipzig":
+                    constant = 1
+                for frame in range(frameCount + 1):
+                    r, c = (move.startR + ((frame / frameCount) * delta_r), move.startC + ((frame / frameCount) * delta_c))
+                    #draw board and pieces
+                    self.drawBoard(gs, ss, mode)
+                    self.drawPieces(gs, ss, mode)
+                    #erase start and end squares
+                    startSquare = p.Rect(self.adjustForFlipBoard(move.startC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                    p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.startR, gs.whiteToMove, ss.flipBoard, mode) + self.adjustForFlipBoard(move.startC, gs.whiteToMove, ss.flipBoard, mode)) % 2], startSquare)
+                    endSquare = p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE)
+                    p.draw.rect(self.screen, self.BOARD_COLORS[ss.boardColorScheme][(self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) + self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode)) % 2], endSquare)
+                    #if piece will be captured, redraw captured piece
+                    if move.pieceCaptured != "--":
+                        self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceCaptured)) + constant], p.Rect(self.adjustForFlipBoard(move.endC, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(move.endR, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
+                    #draw moved piece at animated coordinates
+                    self.screen.blit(self.IMAGES[(2 * self.PIECES.index(move.pieceMoved)) + constant], p.Rect(self.adjustForFlipBoard(c, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.adjustForFlipBoard(r, gs.whiteToMove, ss.flipBoard, mode) * self.SQ_SIZE, self.SQ_SIZE, self.SQ_SIZE))
 
-                self.flipDisplay()
-                self.tickClock(FPS = animationFPS)
+                    self.flipDisplay()
+                    self.tickClock(FPS = animationFPS)
 
     def adjustForFlipBoard(self, num, whiteTurn, flipBoard, mode):
         if mode == "oneMultiplayer":

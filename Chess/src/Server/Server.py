@@ -33,7 +33,6 @@ class Server():
         self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, "2MMultiplayer")
         self.gameClock.runClock(self.gameState)
         self.whiteClockOn = True
-        self.num_ticks = 0
         self.whiteTimeout = False
         self.blackTimeout = False
         self.gameComplete = False
@@ -55,12 +54,11 @@ class Server():
                 self.gameComplete = True
             if self.wRequestReset & self.bRequestReset:
                 self.resetGame = True
-                self.gameState = GameState()
+                self.gameState.resetGameState()
                 self.colors = ["w", "b"]
-                self.gameClock = Clock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
+                self.gameClock.resetClock(self.defaultBaseTime, self.defaultIncrementTime, self.defaultBaseTime, self.defaultIncrementTime)
                 self.gameClock.runClock(self.gameState)
                 self.whiteClockOn = True
-                self.num_ticks = 0
                 self.whiteTimeout = False
                 self.blackTimeout = False
                 self.gameComplete = False
@@ -79,11 +77,9 @@ class Server():
                 elif whiteTaken:
                     blackTaken = True
                     start_new_thread(self.threaded_client, (conn, 1))
-                    self.gameClock.runClock(self.gameState)
                 elif blackTaken:
                     whiteTaken = True
                     start_new_thread(self.threaded_client, (conn, 0))
-                    self.gameClock.runClock(self.gameState)
 
     def threaded_client(self, conn, currentPlayer):
         conn.send(pickle.dumps(self.gameState))

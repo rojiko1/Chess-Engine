@@ -51,16 +51,13 @@ class Clock():
         thread.start()
 
     def runClock2(self, tickClock, FPS):
-        if self.gameType != "2MMultiplayer":
-            multiplier = 0.82 #use if needed to account for lag
-        else:
-            multiplier = 2.0
         while not self.gsReference.gameOver:
             if len(self.gsReference.moveLog) > 0:
                 if self.gsReference.whiteToMove:
-                    self.whiteBaseTime = self.whiteBaseTime - int(1000 / (FPS * multiplier))
+                    self.whiteBaseTime = self.whiteBaseTime - (1000 * (time.time() - lastTime))
                 else:
-                    self.blackBaseTime = self.blackBaseTime - int(1000 / (FPS * multiplier))
+                    self.blackBaseTime = self.blackBaseTime - (1000 * (time.time() - lastTime))
+            lastTime = time.time()
             tickClock.tick(FPS)
 
     def updateGSReference(self, gs):

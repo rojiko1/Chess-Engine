@@ -13,7 +13,7 @@ from Chess.src.Server.Network import Network
 from Chess.src.AI.Computer import Computer
 
 #Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation
-#Current issue: game management when players disconnect
+#Current issue: improve Minimax significantly
 
 def main():
     ss = SettingsState()
@@ -150,15 +150,18 @@ def run_single_machine_multiplayer(ss, ui, running):
                                 playerClicks = []
                         if not moveMade:
                             playerClicks = [sqSelected]
-            elif (e.type == p.KEYDOWN) & (not gameComplete):
-                if e.key == p.K_BACKSPACE:
+            elif e.type == p.KEYDOWN:
+                if (e.key == p.K_BACKSPACE) & (not gameComplete):
                     if (ss.undoMoveEnabled) & (len(gs.moveLog) > 0):
                         gameClock.decrement(gs.getTurnColor()) #prevents time gain from undoing a move
                         gs.undoMove()
                         moveMade = True
-                if e.key == p.K_x: #reset gameState
+                if e.key == p.K_x: #reset
+                    gs.gameOver = True
+                    time.sleep(0.05) #allow time for runClock2 thread to kill itself
                     gs.resetGameState()
                     gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
+                    gameClock.runClock(gs)
                     whiteClockOn = True
                     gameComplete = False
                     sqSelected = ()
@@ -385,30 +388,44 @@ def run_two_machine_multiplayer(ss, ui, running):
                 ui.drawGameState(gs, ss, sqSelected, legalMoves, gameClock, not gs.whiteToMove, mode)
             if gs.checkmate:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("checkmate", color = gs.getOppColor(gs.getTurnColor()))
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif gs.stalemate:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("stalemate")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif tempInsufficientMaterial:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("insufficientMaterial")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif tempRepetition:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("repetition")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif tempFiftyMove:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("fiftyMove")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif whiteTimeout:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("whiteTimeout")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
             elif blackTimeout:
                 gameComplete = True
+                gs.gameOver = True
+                msg = n.send(gs)
                 ui.drawEndOfGame("blackTimeout")
                 playsound("../../assets/sounds/end_of_game_sound.mp3")
 
@@ -445,7 +462,7 @@ def run_single_player(ss, ui, running):
     #game screen
     mode = "singlePlayer"
 
-    if random.random() < 0.5:
+    if random.random() < 0.01:
         myColorIsWhite = True
         myColor = "w"
         compColor = "b"
@@ -566,13 +583,15 @@ def run_single_player(ss, ui, running):
                                     playerClicks = []
                             if not moveMade:
                                 playerClicks = [sqSelected]
-                elif (e.type == p.KEYDOWN) & (not gameComplete):
-                    if e.key == p.K_BACKSPACE:
+                elif e.type == p.KEYDOWN:
+                    if (e.key == p.K_BACKSPACE) & (not gameComplete):
                         if (ss.undoMoveEnabled) & (len(gs.moveLog) > 0):
                             gameClock.decrement(gs.getTurnColor()) #prevents time gain from undoing a move
                             gs.undoMove()
                             moveMade = True
-                    if e.key == p.K_x: #reset gameState
+                    if e.key == p.K_x: #reset
+                        gs.gameOver = True
+                        time.sleep(0.05) #allow time for runClock2 thread to kill itself
                         gs.resetGameState()
                         gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
                         whiteClockOn = True
