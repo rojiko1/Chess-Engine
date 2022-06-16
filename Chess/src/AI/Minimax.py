@@ -16,7 +16,7 @@ class Minimax():
                 gs.moveLog.append(legalMoves[0])
             else:
                 copyLegalMoves = copy.deepcopy(legalMoves)
-                evaluation, index = self.recursiveMinimax(gs2, depth, 1, copyLegalMoves, evaluator, CONSTANT, -999.9)
+                evaluation, index = self.recursiveMinimax(gs2, depth, 1, copyLegalMoves, evaluator, CONSTANT, -999.0)
 
                 #make move
                 gs.moveLog.append(legalMoves[index])
@@ -30,8 +30,8 @@ class Minimax():
         #best evaluation for the color whose move it is gets passed up that branch
         #repeat process until reaching the root node
         #return the evaluation and index of the best move
-        if len(gs2.moveLog) > 0:
-            legalMoves = self.reorderLegalMoves(legalMoves, gs2.moveLog[-1]) #reorder moves so that more can be pruned (reduce time complexity)
+        '''if len(gs2.moveLog) > 0:
+            legalMoves = self.reorderLegalMoves(legalMoves, gs2.moveLog[-1]) #reorder moves so that more can be pruned (reduce time complexity)'''
         if depth == currentDepth:
             if currentDepth % 2 == 1:
                 CONSTANT2 = 1
@@ -42,7 +42,7 @@ class Minimax():
             if len(legalMoves) > 0:
                 for move in legalMoves:
                     gs2.makeMove(move)
-                    evaluation = CONSTANT * CONSTANT2 * evaluator.evaluatePosition(gs2.board)
+                    evaluation = CONSTANT * CONSTANT2 * evaluator.evaluatePosition(gs2.board, gs2.moveNumWhiteCastled, gs2.moveNumBlackCastled)
                     gs2.undoMove()
                     self.numberOfMovesSearched += 1
                     if evaluation > highestEval:
@@ -51,23 +51,28 @@ class Minimax():
                         if (-1 * highestEval) < networkWideHigh:
                             return -999.0, -1
             elif gs2.inCheck(gs2.getTurnColor()):
-                return -999.9, -1
+                return 999.0, -1
             else:
                 return 0.0, -1
             return (-1 * highestEval), indexOfHighestEval
         else:
             highestEval = -999.0
             indexOfHighestEval = -1
-            for move in legalMoves:
-                gs2.makeMove(move)
-                legalMoves2 = gs2.getLegalMoves()
-                evaluation, index = self.recursiveMinimax(gs2, depth, currentDepth + 1, legalMoves2, evaluator, CONSTANT, highestEval)
-                gs2.undoMove()
-                if evaluation > highestEval:
-                    highestEval = evaluation
-                    indexOfHighestEval = legalMoves.index(move)
-                    if (-1 * highestEval) < networkWideHigh:
-                        return -999.0, -1
+            if len(legalMoves) > 0:
+                for move in legalMoves:
+                    gs2.makeMove(move)
+                    legalMoves2 = gs2.getLegalMoves()
+                    evaluation, index = self.recursiveMinimax(gs2, depth, currentDepth + 1, legalMoves2, evaluator, CONSTANT, highestEval)
+                    gs2.undoMove()
+                    if evaluation > highestEval:
+                        highestEval = evaluation
+                        indexOfHighestEval = legalMoves.index(move)
+                        if (-1 * highestEval) < networkWideHigh:
+                            return -999.0, -1
+            elif gs2.inCheck(gs2.getTurnColor()):
+                return 999.0, -1
+            else:
+                return 0.0, -1
             return (-1 * highestEval), indexOfHighestEval
 
     def reorderLegalMoves(self, legalMoves, lastMove):

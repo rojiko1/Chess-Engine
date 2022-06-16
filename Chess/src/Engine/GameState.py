@@ -38,6 +38,9 @@ class GameState():
         #initialize right to castle
         self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
         self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
+        #move number that color castled (positive = king side, negative = queen side)
+        self.moveNumWhiteCastled = 0
+        self.moveNumBlackCastled = 0
         if self.wKingLocation == (7, 4):
             if self.board[7][7] == "wR":
                 self.hasCastlingRight['wks'] = True
@@ -53,6 +56,7 @@ class GameState():
                 self.hasCastlingRight['bqs'] = True
                 self.castlingRightLost['bqs'] = -1
         self.noCaptureCount = 0
+        #log of boards for purposes of determining draw by threefold repetition
         self.whiteBoards = [[copy.deepcopy(self.board), 1]]
         self.blackBoards = []
         self.legalMoves = []
@@ -91,6 +95,9 @@ class GameState():
         #initialize right to castle
         self.hasCastlingRight = {'wks': False, 'wqs': False, 'bks': False, 'bqs': False}
         self.castlingRightLost = {'wks': 0, 'wqs': 0, 'bks': 0, 'bqs': 0}
+        #move number that color castled (positive = king side, negative = queen side)
+        self.moveNumWhiteCastled = 0
+        self.moveNumBlackCastled = 0
         if self.wKingLocation == (7, 4):
             if self.board[7][7] == "wR":
                 self.hasCastlingRight['wks'] = True
@@ -144,9 +151,17 @@ class GameState():
             if move.endC == 2:
                 self.board[move.endR][0] = "--"
                 self.board[move.endR][move.endC + 1] = color + "R"
+                if color == "w":
+                    self.moveNumWhiteCastled = len(self.moveLog) + 1
+                elif color == "b":
+                    self.moveNumBlackCastled = len(self.moveLog) + 1
             elif move.endC == 6:
                 self.board[move.endR][7] = "--"
                 self.board[move.endR][move.endC - 1] = color + "R"
+                if color == "w":
+                    self.moveNumWhiteCastled = -1 * (len(self.moveLog) + 1)
+                elif color == "b":
+                    self.moveNumBlackCastled = -1 * (len(self.moveLog) + 1)
         #record capture count for 50 move rule
         if move.pieceCaptured == "--":
             self.noCaptureCount = self.noCaptureCount + 1
@@ -178,7 +193,7 @@ class GameState():
     def undoMove(self):
         move = self.moveLog[-1]
         color = move.pieceMoved[0]
-        self.deleteBoard()
+        self.deleteBoard() #remove last board from board log
         self.board[move.startR][move.startC] = move.pieceMoved
         self.board[move.endR][move.endC] = move.pieceCaptured
         if move.enPassant:
@@ -187,12 +202,17 @@ class GameState():
             elif color == "b":
                 self.board[move.endR - 1][move.endC] = "wp"
         if move.castling:
+            if abs(self.moveNumWhiteCastled) == len(self.moveLog):
+                self.moveNumWhiteCastled = 0
+            elif abs(self.moveNumBlackCastled) == len(self.moveLog):
+                self.moveNumBlackCastled = 0
             if move.endC == 6:
                 self.board[move.endR][move.endC - 1] = "--"
                 self.board[move.startR][7] = color + "R"
             elif move.endC == 2:
                 self.board[move.endR][move.endC + 1] = "--"
                 self.board[move.startR][0] = color + "R"
+        #undo changes to castling rights lost from last move
         for key, value in self.castlingRightLost.items():
             if value == len(self.moveLog):
                 self.hasCastlingRight[key] = True
@@ -214,6 +234,7 @@ class GameState():
         self.insufficientMaterial = False
 
     def updateCastling(self):
+        #remove correct castling rights on king and rook moves
         lastMove = self.moveLog[-1]
         color = lastMove.pieceMoved[0]
         pieceType = lastMove.pieceMoved[1]
@@ -231,11 +252,13 @@ class GameState():
                 self.updateKingSideCastling(color)
 
     def updateKingSideCastling(self, color):
+        #remove king side castling rights
         if self.castlingRightLost[color + "ks"] < 0:
             self.hasCastlingRight[color + "ks"] = False
             self.castlingRightLost[color + "ks"] = len(self.moveLog)
 
     def updateQueenSideCastling(self, color):
+        #remove queen side castling rights
         if self.castlingRightLost[color + "qs"] < 0:
             self.hasCastlingRight[color + "qs"] = False
             self.castlingRightLost[color + "qs"] = len(self.moveLog)
@@ -290,7 +313,16 @@ class GameState():
         elif turn == "b":
             return self.squareUnderAttack(self.bKingLocation[0], self.bKingLocation[1], turn)
 
+    def squareUnderAttack(self, r, c, turn):
+        oppMoves = self.getPossibleMoves(self.getOppColor(turn))
+        #check if any opposing possible moves attacks given square
+        for move in oppMoves:
+            if (move.endR == r) & (move.endC == c):
+                return True
+        return False
+
     def findNoCaptureCount(self):
+        #counts number of moves without a capture
         index = 1
         noCaptureCount = 0
         while (index < len(self.moveLog)) & (self.moveLog[-1 * index].pieceCaptured == "--"):
@@ -299,6 +331,7 @@ class GameState():
         return noCaptureCount
 
     def boardEquals(self, board):
+        #check if given board is identical to current board
         for r in range(len(board)):
             for c in range(len(board[0])):
                 if self.board[r][c] != board[r][c]:
@@ -306,6 +339,7 @@ class GameState():
         return True
 
     def recordBoard(self):
+        #add to correct board log
         if self.getOppColor(self.getTurnColor()) == "w":
             for board in self.whiteBoards:
                 if self.boardEquals(board[0]):
@@ -322,6 +356,7 @@ class GameState():
             return None
 
     def deleteBoard(self):
+        #remove last recorded board
         if self.getTurnColor() == "w":
             for board in self.whiteBoards:
                 if self.boardEquals(board[0]):
@@ -338,6 +373,7 @@ class GameState():
                         board[1] = board[1] - 1
 
     def checkDrawByRepetition(self):
+        #check for three occurences of same board
         if self.getOppColor(self.getTurnColor()) == "w":
             for board in self.whiteBoards:
                 if board[1] == 3:
@@ -369,13 +405,6 @@ class GameState():
                 secondBishopMoveModulo = (bishopLocations[1][0] + bishopLocations[1][1]) % 2
                 if firstBishopMoveModulo == secondBishopMoveModulo:
                     return True
-        return False
-
-    def squareUnderAttack(self, r, c, turn):
-        oppMoves = self.getPossibleMoves(self.getOppColor(turn))
-        for move in oppMoves:
-            if (move.endR == r) & (move.endC == c):
-                return True
         return False
 
     def getPawnMoves(self, r, c, color, moves):

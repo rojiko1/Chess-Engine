@@ -32,7 +32,8 @@ class Computer():
             compIncrement = gameClock.blackIncrement
 
         #calculate depth from time and endgame value
-        depth = round(math.pow((((6 * compIncrement) + compTime) / 10000), 1/4) * math.pow(self.calculateEndGameValue(gs), 1/2))
+        #depth = round(math.pow((((6 * compIncrement) + compTime) / 10000), 1/4) * math.pow(self.calculateEndGameValue(gs), 1/2))
+        depth = 2
 
         self.minimax.findOptimalMove(gs, gs2, depth, self.evaluator, self.compColor)
 
@@ -42,6 +43,7 @@ class Computer():
 
     def calculateEndGameValue(self, gs):
         numPieces = 0
+        #calculate number of pieces
         for r in range(0, len(gs.board)):
             for c in range(0, len(gs.board[0])):
                 if gs.board[r][c] != "--":

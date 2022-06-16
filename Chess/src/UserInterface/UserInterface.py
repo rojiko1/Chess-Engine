@@ -6,7 +6,7 @@ from Chess.src.Engine.Move import Move
 
 class UserInterface():
 
-    SIZE_MULTIPLIER = 8/3 #suggested (in order of largest to smallest window size): 2, 8/3, 4
+    SIZE_MULTIPLIER = 2 #suggested (in order of largest to smallest window size): 2, 8/3, 4
     WINDOW_WIDTH = 2560 / SIZE_MULTIPLIER
     WINDOW_HEIGHT = 1800 / SIZE_MULTIPLIER
     WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
@@ -551,38 +551,46 @@ class UserInterface():
     def evaluateSettingsChanges(self, ss):
         x = p.mouse.get_pos()[0]
         y = p.mouse.get_pos()[1]
+        #check for changes to board color setting
         if (x > self.boardColorSchemeLoc[0]) & (x < self.boardColorSchemeLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.boardColorSchemeLoc[1]) & (y < self.boardColorSchemeLoc[1] + self.settingsButtonHeight):
             if x < (self.boardColorSchemeLoc[0] + self.settingsButtonWidth):
                 ss.boardColorScheme = "coffee"
             else:
                 ss.boardColorScheme = "greyscale"
+        #check for changes to move highlighting setting
         if (x > self.moveHighlightingLoc[0]) & (x < self.moveHighlightingLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.moveHighlightingLoc[1]) & (y < self.moveHighlightingLoc[1] + self.settingsButtonHeight):
             if x < (self.moveHighlightingLoc[0] + self.settingsButtonWidth):
                 ss.highlightValidMoves = True
             else:
                 ss.highlightValidMoves = False
+        #check for changes to auto queen setting
         if (x > self.autoQueenLoc[0]) & (x < self.autoQueenLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.autoQueenLoc[1]) & (y < self.autoQueenLoc[1] + self.settingsButtonHeight):
             if x < (self.autoQueenLoc[0] + self.settingsButtonWidth):
                 ss.autoQueen = True
             else:
                 ss.autoQueen = False
+        #check for changes to piece style setting
         if (x > self.pieceStyleLoc[0]) & (x < self.pieceStyleLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.pieceStyleLoc[1]) & (y < self.pieceStyleLoc[1] + self.settingsButtonHeight):
             if x < (self.pieceStyleLoc[0] + self.settingsButtonWidth):
                 ss.pieceStyle = "standard"
             else:
                 ss.pieceStyle = "leipzig"
+        #check for changes to undo move setting
         if (x > self.undoMoveLoc[0]) & (x < self.undoMoveLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.undoMoveLoc[1]) & (y < self.undoMoveLoc[1] + self.settingsButtonHeight):
             if x < (self.undoMoveLoc[0] + self.settingsButtonWidth):
                 ss.undoMoveEnabled = True
             else:
                 ss.undoMoveEnabled = False
+        #check for changes to flip board setting
         if (x > self.flipBoardLoc[0]) & (x < self.flipBoardLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.flipBoardLoc[1]) & (y < self.flipBoardLoc[1] + self.settingsButtonHeight):
             if x < (self.flipBoardLoc[0] + self.settingsButtonWidth):
                 ss.flipBoard = True
             else:
                 ss.flipBoard = False
+        #check for changes to base time setting
         if (x > self.baseTimeLoc[0]) & (x < self.baseTimeLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.baseTimeLoc[1]) & (y < self.baseTimeLoc[1] + self.settingsButtonHeight):
             self.changeBaseTime(ss)
+        #check for changes to increment time setting
         if (x > self.incrementTimeLoc[0]) & (x < self.incrementTimeLoc[0] + (2 * self.settingsButtonWidth)) & (y > self.incrementTimeLoc[1]) & (y < self.incrementTimeLoc[1] + self.settingsButtonHeight):
             self.changeIncrementTime(ss)
 

@@ -20,7 +20,7 @@ class Move():
         self.enPassant = enPassant
         #castling
         self.castling = castling
-
+        #move notation
         self.notation = ""
 
     def __eq__(self, other):

@@ -15,7 +15,6 @@ class Network():
     def connect(self):
         try:
             self.client.connect(self.addr)
-            #print(pickle.loads(self.client.recv(2048)))
             return pickle.loads(self.client.recv(16384))
         except:
             pass

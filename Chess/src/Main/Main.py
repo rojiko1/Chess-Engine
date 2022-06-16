@@ -2,7 +2,6 @@ import time
 import pygame as p
 from playsound import playsound
 import random
-import threading
 
 from Chess.src.Engine.Clock import Clock
 from Chess.src.Engine.GameState import GameState
@@ -13,7 +12,7 @@ from Chess.src.Server.Network import Network
 from Chess.src.AI.Computer import Computer
 
 #Project status: drag pieces to make move, scaling multiplayer w/ server, lichess api for AI, chess notation
-#Current issue: improve Minimax significantly
+#Current issue: improve Minimax significantly (parallelization, evaluation function)
 
 def main():
     ss = SettingsState()
@@ -122,6 +121,7 @@ def run_single_machine_multiplayer(ss, ui, running):
                             if move == legalMove:
                                 if (legalMove.pawnPromotion) & (not ss.autoQueen):
                                     choiceMade = False
+                                    print("Select the piece you would like to promote to by clicking the correct key (do not type in the console):")
                                     print("q for queen")
                                     print("n or k for knight")
                                     print("r for rook")
@@ -157,7 +157,7 @@ def run_single_machine_multiplayer(ss, ui, running):
                         gs.undoMove()
                         moveMade = True
                 if e.key == p.K_x: #reset
-                    gs.gameOver = True
+                    gs.gameOver = True #indicate to runClock2 thread to kill itself
                     time.sleep(0.05) #allow time for runClock2 thread to kill itself
                     gs.resetGameState()
                     gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
@@ -327,6 +327,7 @@ def run_two_machine_multiplayer(ss, ui, running):
                                     if move == legalMove:
                                         if (legalMove.pawnPromotion) & (not ss.autoQueen):
                                             choiceMade = False
+                                            print("Select the piece you would like to promote to by clicking the correct key (do not type in the console):")
                                             print("q for queen")
                                             print("n or k for knight")
                                             print("r for rook")
@@ -510,6 +511,7 @@ def run_single_player(ss, ui, running):
                     if premove == legalMove:
                         if (legalMove.pawnPromotion) & (not ss.autoQueen):
                             choiceMade = False
+                            print("Select the piece you would like to promote to by clicking the correct key (do not type in the console):")
                             print("q for queen")
                             print("n or k for knight")
                             print("r for rook")
@@ -590,7 +592,7 @@ def run_single_player(ss, ui, running):
                             gs.undoMove()
                             moveMade = True
                     if e.key == p.K_x: #reset
-                        gs.gameOver = True
+                        gs.gameOver = True #indicate to runClock2 thread to kill itself
                         time.sleep(0.05) #allow time for runClock2 thread to kill itself
                         gs.resetGameState()
                         gameClock.resetClock(ss.clockLength, ss.clockIncrement, ss.clockLength, ss.clockIncrement)
@@ -617,7 +619,7 @@ def run_single_player(ss, ui, running):
                 moveMade = False
                 generatedLegalMoves = False
                 sentComputerMoveRequest = False
-                print("Evaluation after", myColor, "is:", str(computer.evaluator.evaluatePosition(gs.board)))
+                print("Evaluation after", myColor, "is:", str(computer.evaluator.evaluatePosition(gs.board, gs.moveNumWhiteCastled, gs.moveNumBlackCastled)))
         elif myColorIsWhite != gs.whiteToMove:
             if not sentComputerMoveRequest:
                 length = len(gs.moveLog)
@@ -648,7 +650,7 @@ def run_single_player(ss, ui, running):
                 gs.makeMove(move)
                 ui.animateMove(gs, ss, mode)
                 gameClock.increment(compColor)
-                print("Evaluation after", compColor, "is:", str(computer.evaluator.evaluatePosition(gs.board)))
+                print("Evaluation after", compColor, "is:", str(computer.evaluator.evaluatePosition(gs.board, (gs.moveNumWhiteCastled != -1), (gs.moveNumBlackCastled != -1))))
         if not gameComplete:
             if gameClock.whiteBaseTime <= 0:
                 whiteTimeout = True

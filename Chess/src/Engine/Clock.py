@@ -53,6 +53,7 @@ class Clock():
     def runClock2(self, tickClock, FPS):
         while not self.gsReference.gameOver:
             if len(self.gsReference.moveLog) > 0:
+                #subtract time passed since last frame if first move has been made
                 if self.gsReference.whiteToMove:
                     self.whiteBaseTime = self.whiteBaseTime - (1000 * (time.time() - lastTime))
                 else:
@@ -60,5 +61,5 @@ class Clock():
             lastTime = time.time()
             tickClock.tick(FPS)
 
-    def updateGSReference(self, gs):
+    def updateGSReference(self, gs): #only applicable for 2-machine multiplayer mode
         self.gsReference = gs
