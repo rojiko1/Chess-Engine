@@ -48,6 +48,9 @@ def run_menu(ui, ss, running):
                     defaultSettings.close()
                     return "oneMultiplayer"
                 elif ui.twoMultiplayerStartButton:
+                    defaultSettings = open("../defaultSettings.txt", "w")
+                    defaultSettings.write(ss.boardColorScheme + "\n" + str(ss.highlightValidMoves) + "\n" + str(ss.autoQueen) + "\n" + ss.pieceStyle + "\n" + str(ss.undoMoveEnabled) + "\n" + str(ss.flipBoard) + "\n" + str(ss.clockLength) + "\n" + str(ss.clockIncrement))
+                    defaultSettings.close()
                     return "twoMultiplayer"
                 elif ui.singlePlayerStartButton:
                     defaultSettings = open("../defaultSettings.txt", "w")
@@ -463,7 +466,7 @@ def run_single_player(ss, ui, running):
     #game screen
     mode = "singlePlayer"
 
-    if random.random() < 0.01:
+    if random.random() < 0.5:
         myColorIsWhite = True
         myColor = "w"
         compColor = "b"
@@ -650,7 +653,7 @@ def run_single_player(ss, ui, running):
                 gs.makeMove(move)
                 ui.animateMove(gs, ss, mode)
                 gameClock.increment(compColor)
-                print("Evaluation after", compColor, "is:", str(computer.evaluator.evaluatePosition(gs.board, (gs.moveNumWhiteCastled != -1), (gs.moveNumBlackCastled != -1))))
+                print("Evaluation after", compColor, "is:", str(computer.evaluator.evaluatePosition(gs.board, gs.moveNumWhiteCastled, gs.moveNumBlackCastled)))
         if not gameComplete:
             if gameClock.whiteBaseTime <= 0:
                 whiteTimeout = True

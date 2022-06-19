@@ -15,8 +15,8 @@ class Minimax():
             if len(legalMoves) == 1: #if only one possible move, make move
                 gs.moveLog.append(legalMoves[0])
             else:
-                copyLegalMoves = copy.deepcopy(legalMoves)
-                evaluation, index = self.recursiveMinimax(gs2, depth, 1, copyLegalMoves, evaluator, CONSTANT, -999.0)
+                #copyLegalMoves = copy.deepcopy(legalMoves)
+                evaluation, index = self.recursiveMinimax(gs2, depth, 1, legalMoves, evaluator, CONSTANT, -999.0)
 
                 #make move
                 gs.moveLog.append(legalMoves[index])

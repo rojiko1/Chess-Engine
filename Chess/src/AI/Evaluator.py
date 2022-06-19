@@ -1,7 +1,7 @@
 class Evaluator():
 
     def __init__(self):
-        self.KING_VALUE = 99.0
+        self.KING_VALUE = 999.0
         self.QUEEN_VALUE = 9.0
         self.ROOK_VALUE = 5.0
         self.BISHOP_VALUE = 3.0
@@ -28,7 +28,16 @@ class Evaluator():
             [0.03, 0.03, 0.06, 0.06, 0.06, 0.06, 0.03, 0.03],
             [0.03, 0.03, 0.06, 0.06, 0.06, 0.06, 0.03, 0.03]
         ]
-        self.QUEEN_MAPPING = []
+        self.QUEEN_MAPPING = [
+            [0.05, 0.14, 0.14, 0.21, 0.21, 0.14, 0.14, 0.06],
+            [0.14, 0.28, 0.28, 0.28, 0.28, 0.28, 0.28, 0.18],
+            [0.14, 0.28, 0.35, 0.35, 0.35, 0.35, 0.28, 0.18],
+            [0.21, 0.28, 0.35, 0.35, 0.35, 0.35, 0.28, 0.27],
+            [0.21, 0.28, 0.35, 0.35, 0.35, 0.35, 0.28, 0.27],
+            [0.14, 0.28, 0.35, 0.35, 0.35, 0.35, 0.28, 0.18],
+            [0.14, 0.28, 0.28, 0.28, 0.28, 0.28, 0.28, 0.18],
+            [0.06, 0.18, 0.18, 0.27, 0.27, 0.18, 0.18, 0.06]
+        ]
         self.ROOK_MAPPING = [
             [0.13, 0.17, 0.19, 0.22, 0.22, 0.19, 0.17, 0.13],
             [0.11, 0.15, 0.17, 0.20, 0.20, 0.17, 0.15, 0.11],
@@ -92,6 +101,7 @@ class Evaluator():
                         whiteTotal += self.WHITE_KING_MAPPING[r][c]
                     elif piece[1] == "Q":
                         whiteTotal += self.QUEEN_VALUE
+                        whiteTotal += self.QUEEN_MAPPING[r][c]
                     elif piece[1] == "R":
                         whiteTotal += self.ROOK_VALUE
                         whiteTotal += self.ROOK_MAPPING[r][c]
@@ -110,6 +120,7 @@ class Evaluator():
                         blackTotal += self.BLACK_KING_MAPPING[r][c]
                     elif piece[1] == "Q":
                         blackTotal += self.QUEEN_VALUE
+                        blackTotal += self.QUEEN_MAPPING[r][c]
                     elif piece[1] == "R":
                         blackTotal += self.ROOK_VALUE
                         blackTotal += self.ROOK_MAPPING[r][c]

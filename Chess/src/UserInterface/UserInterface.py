@@ -6,7 +6,7 @@ from Chess.src.Engine.Move import Move
 
 class UserInterface():
 
-    SIZE_MULTIPLIER = 2 #suggested (in order of largest to smallest window size): 2, 8/3, 4
+    SIZE_MULTIPLIER = 8/3 #suggested (in order of largest to smallest window size): 2, 8/3, 4
     WINDOW_WIDTH = 2560 / SIZE_MULTIPLIER
     WINDOW_HEIGHT = 1800 / SIZE_MULTIPLIER
     WIDTH = HEIGHT = 1600 / SIZE_MULTIPLIER
