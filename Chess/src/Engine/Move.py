@@ -33,24 +33,24 @@ class Move():
     def generateChessNotation(self, gs):
         notation = ""
         if self.pieceMoved[1] == "K":
-            notation = "K" + self.getRankFile(self.endR, self.endC)
+            notation = "K" + Move.getRankFile(self.endR, self.endC)
         elif self.pieceMoved[1] == "Q":
-            notation = "Q" + self.getRankFile(self.endR, self.endC)
+            notation = "Q" + Move.getRankFile(self.endR, self.endC)
         elif self.pieceMoved[1] == "R":
-            notation = "R" + self.getRankFile(self.endR, self.endC)
+            notation = "R" + Move.getRankFile(self.endR, self.endC)
         elif self.pieceMoved[1] == "B":
-            notation = "B" + self.getRankFile(self.endR, self.endC)
+            notation = "B" + Move.getRankFile(self.endR, self.endC)
         elif self.pieceMoved[1] == "N":
-            notation = "N" + self.getRankFile(self.endR, self.endC)
+            notation = "N" + Move.getRankFile(self.endR, self.endC)
         elif self.pieceMoved[1] == "p":
-            notation = self.getRankFile(self.endR, self.endC)
+            notation = Move.getRankFile(self.endR, self.endC)
 
         if not self.pieceCaptured == "--":
             p1 = notation[:-2]
             p2 = notation[-2:]
             notation = p1 + "x" + p2
             if notation[0] == "x":
-                notation = self.getRankFile(self.startR, self.startC)[0] + notation
+                notation = Move.getRankFile(self.startR, self.startC)[0] + notation
 
         if self.pawnPromotion:
             notation = notation + "=" + self.promotionChoice
@@ -69,5 +69,10 @@ class Move():
     def updateNotationWithCheckmate(self):
         self.notation = self.notation[:-1] + "#"
 
-    def getRankFile(self, r, c):
-        return self.columnsToFiles[c] + self.rowsToRanks[r]
+    @staticmethod
+    def getRankFile(r, c):
+        return Move.columnsToFiles[c] + Move.rowsToRanks[r]
+
+    @staticmethod
+    def getSquare(rankFile):
+        return [Move.ranksToRows[rankFile[1]], Move.filesToColumns[rankFile[0]]]

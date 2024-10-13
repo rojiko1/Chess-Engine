@@ -233,6 +233,13 @@ class GameState():
         self.drawByRepetition = False
         self.insufficientMaterial = False
 
+    def stockfishMoveLog(self):
+        stockfishMoveLog = []
+        for move in self.moveLog:
+            stockfishMoveLog.append(move.getRankFile(move.startR, move.startC) + move.getRankFile(move.endR, move.endC))
+        return stockfishMoveLog
+
+
     def updateCastling(self):
         #remove correct castling rights on king and rook moves
         lastMove = self.moveLog[-1]
